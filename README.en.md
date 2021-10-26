@@ -1,26 +1,27 @@
 # X-diagnosis
 
 #### Introduction
-X-diagnosis is a tool set for operating system development and operation and maintenance.
 
-The tool set includes the following tools:
+X-diagnosis is a tool set for operating system development and operation & maintenance.  
 
-cpuload CPU flushing detection tool, using this tool can accurately print out processes with high CPU usage within 1 second. It is very helpful for performance fluctuations.
+The tool set includes the following tools:  
 
-The memory management of memtool glibc is widely used, but the method of adjusting the position is limited. This tool can detect memory leaks in user-mode processes and collect memory distribution information in user-mode processes.
+cpuload CPU flushing detection tool, which can accurately print out processes with high CPU usage within 1 second. It is very helpful for handling performance fluctuations.  
 
-oom_debug_info is a kernel module that can help maintainers to define where the problem lies when the operating system is OOM.
+memtool glibc memory management tool, which is widely used but has limited debugging and fault locating methods. It can detect memory leaks in user-mode processes and collect memory distribution information in user-mode processes.  
 
-deadlock D process and deadlock checking mechanism.
+oom_debug_info, which is a kernel module that can help maintainers find where the problem lies when the operating system encounters OOM.  
 
-kernel_debug is a tool for accurately locating memory leaks in kernel modules. The kernel's partner system, memory managed by slab, LRU, vmalloc, if the memory leaks, how to locate it easily.
+deadlock D, which is a process and deadlock checking mechanism.  
 
-debug_log CPU rushes to collect the key information of the system. It is convenient to locate the fault location more accurately.
+kernel_debug, which is a tool for accurately locating memory leaks in kernel modules. It is effective for the kernel's partner systems, memory managed by slab, LRU, and vmalloc.  
+
+debug_log, which collects key system information when CPUs rush. It helps to locate faults.  
 
 
 
 
-#### Installation tutorial
+#### Installation Tutorial
 
 ```shell
 # Install based on source code
@@ -34,33 +35,33 @@ make install
 
 
 
-#### Instructions for use
+#### Instructions for Use
 
-Please check the documentation for each tool.
-
-
-
-#### Participate in Contribution
-
-1. Fork this warehouse
-2. Submit the code
-3. Create a new Pull Request
+Please check the documentation for each tool.  
 
 
 
-#### Maintainer mailing list
+#### Contributing
 
-gameoverboss@163.com
-
-liuchao173@huawei.com
-
-liuzixian4@huawei.com
-
-snoweay@163.com
+1. Fork this warehouse.  
+2. Submit the code.  
+3. Create a new Pull Request.  
 
 
 
-#### FAQ
+#### Maintainers
 
-1. For bugs and requirements, please submit issues at https://gitee.com/openeuler/X-diagnosis/issues.
-2. Any software related issues can be emailed to the maintainer. Looking forward to your mail.
+gameoverboss@163.com  
+
+liuchao173@huawei.com  
+
+liuzixian4@huawei.com  
+
+snoweay@163.com  
+
+
+
+#### FAQs
+
+1. For bugs and requirements, please submit issues at https://gitee.com/openeuler/X-diagnosis/issues.  
+2. Any software related issues can be emailed to a maintainer. Looking forward to your feedback.
