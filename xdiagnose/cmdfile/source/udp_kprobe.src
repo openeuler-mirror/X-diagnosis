@@ -1,0 +1,406 @@
+
+p start
+void udp_lib_unhash(struct sock *sk)
+    sk = sk
+    srcip = sk->__sk_common.skc_rcv_saddr
+    dstip = sk->__sk_common.skc_daddr
+    srcport = (struct inet_sock *)sk->inet_sport
+    dstport = sk->__sk_common.skc_dport
+    sk_rcvbuf = sk->sk_rcvbuf
+    sk_sndbuf = sk->sk_sndbuf
+    sk_receive_queue_qlen = sk->sk_receive_queue.qlen
+    sk_wmem_queued  = sk->sk_wmem_queued
+    sk_write_queue_qlen = sk->sk_write_queue.qlen
+end
+
+
+p start
+int udp_sendmsg(struct sock *sk, struct msghdr *msg, size_t len)
+    sk = sk
+    len = len
+    srcip = sk->__sk_common.skc_rcv_saddr
+    dstip = (struct sockaddr_in *)(msg->msg_name)->sin_addr
+    srcport = (struct inet_sock *)sk->inet_sport
+    dstport = (struct sockaddr_in *)(msg->msg_name)->sin_port
+    sk_rcvbuf = sk->sk_rcvbuf
+    sk_sndbuf = sk->sk_sndbuf
+    sk_receive_queue_qlen = sk->sk_receive_queue.qlen
+    sk_wmem_queued  = sk->sk_wmem_queued
+    sk_write_queue_qlen = sk->sk_write_queue.qlen
+end
+
+p start
+int __ip_local_out(struct net *net, struct sock *sk, struct sk_buff *skb)
+    sk = sk
+    skb = skb
+#    memory_allocated = *(sk->__sk_common.proto->memory_allocated)
+    sk_receive_queue_qlen = sk->sk_receive_queue.qlen
+    sk_backlog_rmem_alloc = sk->sk_backlog.rmem_alloc
+    sk_forward_alloc = sk->sk_forward_alloc
+    sk_drops = sk->sk_drops
+    sk_rcvbuf = sk->sk_rcvbuf
+    sk_sndbuf = sk->sk_sndbuf
+    sk_write_queue_qlen = sk->sk_write_queue.qlen
+    sk_wmem_queued = sk->sk_wmem_queued
+    sk_gso_max_segs = sk->sk_gso_max_segs
+    srcip = (struct iphdr *)(skb->data)->saddr
+    dstip = (struct iphdr *)(skb->data)->daddr
+    srcport = (struct udphdr *)(skb->data + 20)->source
+    dstport = (struct udphdr *)(skb->data + 20)->dest
+    udplen = (struct udphdr *)(skb->data + 20)->len
+    ip_len = (struct iphdr *)(skb->data)->tot_len
+    ip_id = (struct iphdr *)(skb->data)->id
+    ip_frag = (struct iphdr *)(skb->data)->frag_off
+    ip_proto = (struct iphdr *)(skb->data)->protocol
+    devname = skb->dev->name
+    skb_len = skb->len
+    skb_datalen = skb->data_len
+end
+
+r start
+static int ip_finish_output(struct sock *sk, struct sk_buff *skb)
+FILTER 'ret!=0'
+end
+
+
+p start
+int ip_output(struct net *net, struct sock *sk, struct sk_buff *skb)
+    skb = skb
+    srcip = (struct iphdr *)(skb->data)->saddr
+    dstip = (struct iphdr *)(skb->data)->daddr
+    srcport = (struct udphdr *)(skb->data + 20)->source
+    dstport = (struct udphdr *)(skb->data + 20)->dest
+    udplen = (struct udphdr *)(skb->data + 20)->len
+    ip_len = (struct iphdr *)(skb->data)->tot_len
+    ip_id = (struct iphdr *)(skb->data)->id
+    ip_frag = (struct iphdr *)(skb->data)->frag_off
+    ip_proto = (struct iphdr *)(skb->data)->protocol
+    devname = skb->dev->name
+    skb_len = skb->len
+    skb_datalen = skb->data_len
+end
+
+
+p start
+static int __dev_queue_xmit(struct sk_buff *skb, struct net_device *sb_dev)
+    skb = skb
+    srcip = (struct iphdr *)(skb->data + 14)->saddr
+    dstip = (struct iphdr *)(skb->data + 14)->daddr
+    srcport = (struct udphdr *)(skb->data + 34)->source
+    dstport = (struct udphdr *)(skb->data + 34)->dest
+    udplen = (struct udphdr *)(skb->data + 34)->len
+    ip_tos = (struct iphdr *)(skb->data + 14)->tos
+    ip_len = (struct iphdr *)(skb->data + 14)->tot_len
+    ip_id = (struct iphdr *)(skb->data + 14)->id
+    ip_frag = (struct iphdr *)(skb->data + 14)->frag_off
+    ip_proto = (struct iphdr *)(skb->data + 14)->protocol
+    ip_check = (struct iphdr *)(skb->data + 14)->check
+    src_mac = (struct ethhdr *)(skb->data)->h_source:b48@0/64
+    dst_mac = (struct ethhdr *)(skb->data)->h_dest:b48@0/64
+    eth_type = (struct ethhdr *)(skb->data)->h_proto
+    devname = skb->dev->name
+    skb_len = skb->len
+    skb_datalen = skb->data_len
+    txq_state = skb->dev._tx->state
+    qdisc_len = skb->dev._tx->qdisc->q.qlen
+end
+
+
+r start
+static int pfifo_fast_enqueue(struct sk_buff *skb, struct Qdisc *qdisc,
+			      struct sk_buff **to_free)
+FILTER 'ret!=0'
+end
+
+p start
+bool sch_direct_xmit(struct sk_buff *skb, struct Qdisc *q,
+                 struct net_device *dev, struct netdev_queue *txq,
+                 spinlock_t *root_lock, bool validate)
+    skb = skb
+    q = q
+    txq = txq
+    srcip = (struct iphdr *)(skb->data + 14)->saddr
+    dstip = (struct iphdr *)(skb->data + 14)->daddr
+    srcport = (struct udphdr *)(skb->data + 34)->source
+    dstport = (struct udphdr *)(skb->data + 34)->dest
+    udplen = (struct udphdr *)(skb->data + 34)->len
+    ip_id = (struct iphdr *)(skb->data + 14)->id
+    ip_proto = (struct iphdr *)(skb->data + 14)->protocol
+    devname = dev->name
+    skb_len = skb->len
+    skb_datalen = skb->data_len
+    txq_state = txq->state
+    qdisc_len = q->q.qlen
+end
+
+p start
+struct sk_buff *dev_hard_start_xmit(struct sk_buff *first, struct net_device *dev,
+                        struct netdev_queue *txq, int *ret)
+    skb = first
+    txq = txq
+    srcip = (struct iphdr *)(first->data + 14)->saddr
+    dstip = (struct iphdr *)(first->data + 14)->daddr
+    srcport = (struct udphdr *)(first->data + 34)->source
+    dstport = (struct udphdr *)(first->data + 34)->dest
+    udplen = (struct udphdr *)(first->data + 34)->len
+    ip_id = (struct iphdr *)(first->data + 14)->id
+    ip_proto = (struct iphdr *)(first->data + 14)->protocol
+    src_mac = (struct ethhdr *)(first->data)->h_source:b48@0/64
+    dst_mac = (struct ethhdr *)(first->data)->h_dest:b48@0/64
+    eth_type = (struct ethhdr *)(first->data)->h_proto
+    devname = dev->name
+    txq_state = txq->state
+end
+
+p start
+static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
+    skb = skb
+    srcip = (struct iphdr *)(skb->data + 14)->saddr
+    dstip = (struct iphdr *)(skb->data + 14)->daddr
+    srcport = (struct udphdr *)(skb->data + 34)->source
+    dstport = (struct udphdr *)(skb->data + 34)->dest
+    udplen = (struct udphdr *)(skb->data + 34)->len
+    ip_id = (struct iphdr *)(skb->data + 14)->id
+    ip_proto = (struct iphdr *)(skb->data + 14)->protocol
+    devname = dev->name
+end
+
+
+p start
+int nf_hook_slow(struct sk_buff *skb, struct nf_hook_state *state,
+             const struct nf_hook_entries *e, unsigned int s)
+    skb = skb
+    hook = state->hook
+    pf = state->pf
+    srcip = (struct iphdr *)(skb->data)->saddr
+    dstip = (struct iphdr *)(skb->data)->daddr
+    srcport = (struct udphdr *)(skb->data + 20)->source
+    dstport = (struct udphdr *)(skb->data + 20)->dest
+    udplen = (struct udphdr *)(skb->data + 20)->len
+    ip_len = (struct iphdr *)(skb->data)->tot_len
+    ip_id = (struct iphdr *)(skb->data)->id
+    ip_frag = (struct iphdr *)(skb->data)->frag_off
+    ip_proto = (struct iphdr *)(skb->data)->protocol
+    devname = skb->dev->name
+    skb_len = skb->len
+    skb_datalen = skb->data_len
+end
+
+p start
+gro_result_t napi_gro_receive(struct napi_struct *napi, struct sk_buff *skb)
+    skb = skb
+    srcip = (struct iphdr *)(skb->data)->saddr
+    dstip = (struct iphdr *)(skb->data)->daddr
+    srcport = (struct udphdr *)(skb->data + 20)->source
+    dstport = (struct udphdr *)(skb->data + 20)->dest
+    udplen = (struct udphdr *)(skb->data + 20)->len
+    ip_len = (struct iphdr *)(skb->data)->tot_len
+    ip_id = (struct iphdr *)(skb->data)->id
+    ip_frag = (struct iphdr *)(skb->data)->frag_off
+    ip_proto = (struct iphdr *)(skb->data)->protocol
+    devname = skb->dev->name
+    skb_len = skb->len
+    skb_datalen = skb->data_len
+    poll = napi->poll
+end
+
+p start
+static int __netif_receive_skb_one_core(struct sk_buff *skb, bool pfmemalloc)
+    skb = skb
+    pfmemalloc = pfmemalloc
+    srcip = (struct iphdr *)(skb->data)->saddr
+    dstip = (struct iphdr *)(skb->data)->daddr
+    srcport = (struct udphdr *)(skb->data + 20)->source
+    dstport = (struct udphdr *)(skb->data + 20)->dest
+    udplen = (struct udphdr *)(skb->data + 20)->len
+    ip_len = (struct iphdr *)(skb->data)->tot_len
+    ip_id = (struct iphdr *)(skb->data)->id
+    ip_frag = (struct iphdr *)(skb->data)->frag_off
+    ip_proto = (struct iphdr *)(skb->data)->protocol
+    src_mac = (struct ethhdr *)(skb->data - 14)->h_source:b48@0/64
+    dst_mac = (struct ethhdr *)(skb->data - 14)->h_dest:b48@0/64
+    eth_type = (struct ethhdr *)(skb->data - 14)->h_proto
+    devname = skb->dev->name
+    skb_len = skb->len
+    skb_datalen = skb->data_len
+    skb_iif = skb->skb_iif
+    skb_protocol = skb->protocol
+    skb_csum = skb->csum
+    skb_ipsummed = skb->ip_summed
+    skb_pkttype = skb->pkt_type
+    skb_csumvalid = skb->csum_valid
+    skb_csumcompletesw = skb->csum_complete_sw
+end
+
+p start
+int ip_rcv_core(struct sk_buff *skb, struct net *net)
+    skb = skb
+    srcip = (struct iphdr *)(skb->data)->saddr
+    dstip = (struct iphdr *)(skb->data)->daddr
+    srcport = (struct udphdr *)(skb->data + 20)->source
+    dstport = (struct udphdr *)(skb->data + 20)->dest
+    udplen = (struct udphdr *)(skb->data + 20)->len
+    ip_len = (struct iphdr *)(skb->data)->tot_len
+    ip_id = (struct iphdr *)(skb->data)->id
+    ip_frag = (struct iphdr *)(skb->data)->frag_off
+    ip_proto = (struct iphdr *)(skb->data)->protocol
+    devname = skb->dev->name
+    skb_len = skb->len
+    skb_datalen = skb->data_len
+    skb_iif = skb->skb_iif
+    skb_protocol = skb->protocol
+    skb_csum =skb->csum
+end
+
+p start
+static int ip_rcv_finish(struct net *net, struct sock *sk, struct sk_buff *skb)
+    skb = skb
+    srcip = (struct iphdr *)(skb->data)->saddr
+    dstip = (struct iphdr *)(skb->data)->daddr
+    srcport = (struct udphdr *)(skb->data + 20)->source
+    dstport = (struct udphdr *)(skb->data + 20)->dest
+    udplen = (struct udphdr *)(skb->data + 20)->len
+    ip_len = (struct iphdr *)(skb->data)->tot_len
+    ip_id = (struct iphdr *)(skb->data)->id
+    ip_frag = (struct iphdr *)(skb->data)->frag_off
+    ip_proto = (struct iphdr *)(skb->data)->protocol
+    devname = skb->dev->name
+    skb_len = skb->len
+    skb_datalen = skb->data_len
+end
+
+p start
+int ip_local_deliver(struct sk_buff *skb)
+    skb = skb
+    srcip = (struct iphdr *)(skb->data)->saddr
+    dstip = (struct iphdr *)(skb->data)->daddr
+    srcport = (struct udphdr *)(skb->data + 20)->source
+    dstport = (struct udphdr *)(skb->data + 20)->dest
+    udplen = (struct udphdr *)(skb->data + 20)->len
+    ip_len = (struct iphdr *)(skb->data)->tot_len
+    ip_id = (struct iphdr *)(skb->data)->id
+    ip_frag = (struct iphdr *)(skb->data)->frag_off
+    ip_proto = (struct iphdr *)(skb->data)->protocol
+    devname = skb->dev->name
+    skb_len = skb->len
+    skb_datalen = skb->data_len
+    skb_iif = skb->skb_iif
+    skb_protocol = skb->protocol
+    skb_csum = skb->csum
+end
+
+p start
+static int ip_local_deliver_finish(struct net *net, struct sock *sk, struct sk_buff *skb)
+    skb = skb
+    srcip = (struct iphdr *)(skb->data)->saddr
+    dstip = (struct iphdr *)(skb->data)->daddr
+    srcport = (struct udphdr *)(skb->data + 20)->source
+    dstport = (struct udphdr *)(skb->data + 20)->dest
+    udplen = (struct udphdr *)(skb->data + 20)->len
+    ip_len = (struct iphdr *)(skb->data)->tot_len
+    ip_id = (struct iphdr *)(skb->data)->id
+    ip_frag = (struct iphdr *)(skb->data)->frag_off
+    ip_proto = (struct iphdr *)(skb->data)->protocol
+    devname = skb->dev->name
+    skb_len = skb->len
+    skb_datalen = skb->data_len
+    skb_csum = skb->csum
+end
+
+p start
+int __udp4_lib_rcv(struct sk_buff *skb, struct udp_table *udptable,
+            int proto)
+    skb = skb
+    srcip = (struct iphdr *)(skb->data - 20)->saddr
+    dstip = (struct iphdr *)(skb->data - 20)->daddr
+    srcport = (struct udphdr *)(skb->data)->source
+    dstport = (struct udphdr *)(skb->data)->dest
+    udplen = (struct udphdr *)(skb->data)->len
+    ip_len = (struct iphdr *)(skb->data - 20)->tot_len
+    ip_id = (struct iphdr *)(skb->data - 20)->id
+    ip_proto = (struct iphdr *)(skb->data - 20)->protocol
+    devname = skb->dev->name
+    skb_len = skb->len
+    skb_datalen = skb->data_len
+    skb_iif = skb->skb_iif
+    skb_csum = skb->csum
+    skb_ipsummed = skb->ip_summed
+    skb_pkttype = skb->pkt_type
+    skb_csumvalid = skb->csum_valid
+    skb_csumcompletesw = skb->csum_complete_sw
+end
+
+r start
+struct sock *__udp4_lib_lookup(struct net *net, __be32 saddr,
+		__be16 sport, __be32 daddr, __be16 dport, int dif,
+		int sdif, struct udp_table *udptable, struct sk_buff *skb)
+FILTER 'ret==0'
+end
+
+p start
+int udp_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
+    sk = sk
+    skb = skb
+#    memory_allocated = *(sk->__sk_common.proto->memory_allocated)
+    sk_receive_queue_qlen = sk->sk_receive_queue.qlen
+    sk_backlog_rmem_alloc = sk->sk_backlog.rmem_alloc
+    sk_forward_alloc = sk->sk_forward_alloc
+    sk_drops = sk->sk_drops
+    sk_rcvbuf = sk->sk_rcvbuf
+    sk_sndbuf = sk->sk_sndbuf
+    sk_write_queue_qlen = sk->sk_write_queue.qlen
+    sk_wmem_queued = sk->sk_wmem_queued
+    sk_gso_max_segs = sk->sk_gso_max_segs
+    encap_rcv = (struct udp_sock *)sk->encap_rcv
+    srcip = (struct iphdr *)(skb->data - 20)->saddr
+    dstip = (struct iphdr *)(skb->data - 20)->daddr
+    srcport = (struct udphdr *)(skb->data)->source
+    dstport = (struct udphdr *)(skb->data)->dest
+    udplen = (struct udphdr *)(skb->data)->len
+    ip_len = (struct iphdr *)(skb->data - 20)->tot_len
+    ip_id = (struct iphdr *)(skb->data - 20)->id
+    ip_proto = (struct iphdr *)(skb->data - 20)->protocol
+    devname = skb->dev->name
+    skb_len = skb->len
+    skb_datalen = skb->data_len
+    skb_iif = skb->skb_iif
+    skb_csum = skb->csum
+    skb_ipsummed = skb->ip_summed
+    skb_pkttype = skb->pkt_type
+    skb_csumvalid = skb->csum_valid
+    skb_csumcompletesw = skb->csum_complete_sw
+end
+
+r start
+int __udp_enqueue_schedule_skb(struct sock *sk, struct sk_buff *skb)
+FILTER 'ret!=0'
+end
+
+r start
+static struct nf_conn *__nf_conntrack_alloc(struct net *net,
+		     const struct nf_conntrack_zone *zone,
+		     const struct nf_conntrack_tuple *orig,
+		     const struct nf_conntrack_tuple *repl,
+		     gfp_t gfp, u32 hash)
+FILTER 'ret==0xfffffffffffffff4'
+end
+
+p start
+int udp_recvmsg(struct sock *sk, struct msghdr *msg, size_t len, int noblock,
+		int flags, int *addr_len)
+    sk = sk
+    len = len
+    srcip = sk->__sk_common.skc_rcv_saddr
+    dstip = sk->__sk_common.skc_daddr
+    srcport = (struct inet_sock *)sk->inet_sport
+    dstport = sk->__sk_common.skc_dport
+    sk_receive_queue_qlen = sk->sk_receive_queue.qlen
+    sk_backlog_rmem_alloc = sk->sk_backlog.rmem_alloc
+    sk_forward_alloc = sk->sk_forward_alloc
+    sk_drops = sk->sk_drops
+    sk_rcvbuf = sk->sk_rcvbuf
+    sk_sndbuf = sk->sk_sndbuf
+    sk_write_queue_qlen = sk->sk_write_queue.qlen
+    sk_wmem_queued = sk->sk_wmem_queued
+end
+

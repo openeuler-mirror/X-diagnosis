@@ -1,0 +1,593 @@
+#!/bin/sh
+
+
+version='v1.0.1'
+sizeset=0
+threshset=0
+
+usage () {
+    echo "Usage:"
+    echo "sysinspect [-i interval] [-r rotate] [-d dest] [-z gzip] [-s size] [-c cpu_thresh] [-m mem_thresh] [-o]"
+    echo "Description:"
+    echo "-i interval:    collect interval in seconds"
+    echo "-r rotate:      the number of archives to save"
+    echo "-d dest:        the destination directory of archives"
+    echo "-z gzip:        compress tool"
+    echo "-s size:        use archive size in MB to rotate, otherwise rotate every hour time"
+    echo "-o:             only record when exceeds threshold or recovers threshold"
+    echo "-c cpu_thresh:  percentage of CPU usage threshold"
+    echo "-m mem_thresh:  percentage of memory usage threshold"
+    exit -1
+}
+
+while getopts 'i:r:d:z:s:oc:m:' OPT; do
+    case $OPT in
+        i) interval="$OPTARG";;
+        r) rotate="$OPTARG";;
+        d) dest="$OPTARG";;
+        z) zip="$OPTARG";;
+        s) size="$OPTARG";;
+        o) only_thresh=1;;
+        c) cpu_thresh="$OPTARG";;
+        m) mem_thresh="$OPTARG";;
+        h) usage;;
+        ?) usage;;
+    esac
+done
+
+################################################################
+# test parameters
+################################################################
+
+test $interval
+if [ $? = 1 ]; then
+    echo "Info: you did not enter a value for interval, using default: 30 seconds"
+    interval=30
+fi
+
+test $rotate
+if [ $? = 1 ]; then
+    echo "Info: you did not enter a value for rotate, using default: 48 backups"
+    rotate=48
+fi
+
+test $cpu_thresh
+if [ $? = 0 ]; then
+    echo "Info: you entered a cpu threshold: ${cpu_thresh}%"
+    threshset=1
+fi
+
+test $mem_thresh
+if [ $? = 0 ]; then
+    echo "Info: you entered a memory threshold: ${mem_thresh}% for data collection"
+    threshset=1
+fi
+
+test $only_thresh
+if [ $? = 0 ]; then
+    echo "Info: record log only when system exceeds or recovers threshold"
+else
+    only_thresh=0
+fi
+
+test $size
+if [ $? = 1 ]; then
+    echo "Info: you did not enter a size value for rotate, use hour time for rotate"
+else
+    echo "Info: you entered a size value for rotate, use size threshold: ${size}M for rotate"
+    sizeset=1
+fi
+
+test $zip
+if [ $? = 1 ]; then
+    echo "Info: you did not enter a tool for compress. Use default gzip to compress"
+    zipset=1
+    zip='gzip'
+fi
+
+test $dest
+if [ $? = 1 ]; then
+    dest=/var/log/x-diagnose/inspect_sys
+    if [ ! -d $dest ]; then
+        mkdir -p $dest
+    fi
+else
+    if [ ! -d $dest ]; then
+        echo "The archive directory you specified does not exist"
+        exit -1
+    fi
+fi
+
+#############################################################
+# check parameters
+#############################################################
+echo ""
+
+path=`pwd`
+if [ $path = "/" ]; then
+  echo "Can not run from the root directory !"
+  exit -1
+fi
+
+abs_dest=$(readlink -f $dest)
+if [ "$abs_dest"x = ""x ] || [ $abs_dest = '/' ]; then
+    echo "Archive destination can not be empty or root directory !"
+    exit -1
+fi
+
+test $interval
+if [ $interval -lt 1 ]; then
+    echo "Warning...Invalid value for interval. Use default: 30 seconds"
+    interval=30
+fi
+
+test $rotate
+if [ $rotate -lt 1 ]; then
+    echo "Warning...Invalid value for rotate. Use default: 48 backups"
+    rotate=48
+fi
+
+#################################################
+# test archive destinations
+#################################################
+testMkdir() {
+    if [ ! -d $dest/$1 ]; then
+        mkdir $dest/$1
+    fi
+}
+
+testMkdir
+testMkdir psmem
+testMkdir top
+testMkdir netstat
+testMkdir iostat
+testMkdir vmstat
+testMkdir mpstat
+testMkdir ifconfig
+testMkdir meminfo
+testMkdir slabinfo
+testMkdir df
+
+testMkdir proc_snmp
+testMkdir proc_snmp6
+testMkdir proc_netstat
+testMkdir proc_sockstat
+testMkdir proc_sockstat6
+
+testMkdir ip_neigh
+testMkdir ip6_neigh
+testMkdir ip_route
+testMkdir ip6_route
+testMkdir ip_rule
+testMkdir ip6_rule
+
+testMkdir tmp
+testMkdir locks
+
+readonly TMPDIR=$dest/tmp
+readonly LOCKDIR=$dest/locks
+
+if [ "$(ls -A $LOCKDIR)" != "" ]; then
+    rm $LOCKDIR/*.file
+fi
+
+if [ "$(ls -A $TMPDIR)" != "" ]; then
+    rm $TMPDIR/*.tmp
+fi
+
+#################################################
+# test utilities
+#################################################
+IOSTAT='iostat -xk 1 3'
+VMSTAT='vmstat 1 3'
+TOP='eval top -b -n 1 | head -50'
+PSELF='ps -elf'
+MPSTAT='mpstat -A 1 2'
+MEMINFO='cat /proc/meminfo'
+SLABINFO='cat /proc/slabinfo'
+IFCONFIG='ifconfig -a'
+DF='df -h'
+
+PROC_SNMP='cat /proc/net/snmp'
+PROC_SNMP6='cat /proc/net/snmp6'
+PROC_NETSTAT='cat /proc/net/netstat'
+PROC_SOCKSTAT='cat /proc/net/sockstat'
+PROC_SOCKSTAT6='cat /proc/net/sockstat6'
+
+IP_NEIGH='ip neigh show'
+IP_NEIGH6='ip -6 neigh show'
+IP_ROUTE='ip route show'
+IP_ROUTE6='ip -6 route show'
+IP_RULE='ip rule show'
+IP_RULE6='ip -6 rule show'
+
+echo "Testing for os utilities..."
+
+testUtility() {
+    $2 > /dev/null 2>&1
+    if [ $? = 0 ]; then
+        echo -e "$1 \t found on your system."
+    else
+        echo "Warning... $1 not found on your system. No $1 data will be collected."
+    fi
+}
+
+testUtility IOSTAT    "$IOSTAT"
+testUtility VMSTAT    "$VMSTAT"
+testUtility TOP       "$TOP"
+testUtility PS        "$PSELF"
+testUtility MPSTAT    "$MPSTAT"
+testUtility MEMINFO   "$MEMINFO"
+testUtility SLABINFO  "$SLABINFO"
+testUtility IFCONFIG  "$IFCONFIG"
+testUtility DF        "$DF"
+
+testUtility PROC_SNMP        "$PROC_SNMP"
+testUtility PROC_SNMP6       "$PROC_SNMP6"
+testUtility PROC_NETSTAT     "$PROC_NETSTAT"
+testUtility PROC_SOCKSTAT    "$PROC_SOCKSTAT"
+testUtility PROC_SOCKSTAT6   "$PROC_SOCKSTAT6"
+
+testUtility IP_NEIGH         "$IP_NEIGH"
+testUtility IP_NEIGH6        "$IP_NEIGH6"
+testUtility IP_ROUTE         "$IP_ROUTE"
+testUtility IP_ROUTE6        "$IP_ROUTE6"
+testUtility IP_RULE          "$IP_RULE"
+testUtility IP_RULE6         "$IP_RULE6"
+
+echo ""
+echo "Test completed."
+
+echo ""
+echo "Starting sysinspect on `date`"
+echo "With interval value: $interval seconds"
+
+if [ $sizeset = 1 ]; then
+    echo "With rotate value: $rotate backups by size threshold: ${size}M"
+else
+    echo "With rotate value: $rotate backups by hour time"
+fi
+
+echo ""
+echo "Data is stored in directory: $dest"
+
+echo ""
+echo "Starting Data Collection..."
+
+run_cmd() {
+    # $1: archive_file
+    # $2: lock_file
+    # $3: collect_cmd
+    echo "zzz ***"`date` >> $1
+    $3 >> $1
+    if [ -f $LOCKDIR/$2lock.file ]; then
+        /usr/bin/rm $LOCKDIR/$2lock.file
+    fi
+}
+
+run_iostat() {
+  # $1 archive_file
+  # $3 collect_cmd
+  lines1=1
+  lines2=1
+  echo "zzz ***"`date` >> $1
+  $3 >> $TMPDIR/iost.tmp
+  lines1=`cat $TMPDIR/iost.tmp | wc -l`
+  lines2=`expr $lines1 / 3`
+  tail -$lines2 $TMPDIR/iost.tmp >> $1
+
+  /usr/bin/rm $TMPDIR/iost.tmp
+  /usr/bin/rm $LOCKDIR/iostatlock.file
+}
+
+run_netstat() {
+    # $1 archive_file
+    echo "zzz ***"`date` >> $1
+    netstat -a -i -n >> $1
+    netstat -s >> $1
+    /usr/bin/rm $LOCKDIR/netstatlock.file
+}
+
+run_psmem() {
+    echo "zzz ***"`date` >> $1
+    ps -aeo    user,pid,ppid,pri,pcpu,pmem,vsize,rssize,wchan,s,start,cputime,command | head -1 >> $1
+    # sort by mem
+    ps -aeo    user,pid,ppid,pri,pcpu,pmem,vsize,rssize,wchan,s,start,cputime,command | awk 'NR!=1' | sort -nr -k 6 >> $1
+    /usr/bin/rm $LOCKDIR/psmemlock.file
+}
+
+run_top() {
+    lines=1
+    header2=1
+    lineRange=1
+
+    echo "zzz ***"`date` >> $1
+    top -b -n2 -d1 > $TMPDIR/rawtop.tmp
+
+    lines=`cat $TMPDIR/rawtop.tmp | wc -l`
+    header2=`cat $TMPDIR/rawtop.tmp | grep -n 'top -.*up.*days,.*load average:'| tail -1 | cut -d ":" -f 1`
+    lineRange=`expr $lines - $header2 + 1`
+
+    tail -$lineRange $TMPDIR/rawtop.tmp >> $TMPDIR/newtop.tmp
+    head -50 $TMPDIR/newtop.tmp >> $1
+
+    /usr/bin/rm $TMPDIR/newtop.tmp
+    /usr/bin/rm $TMPDIR/rawtop.tmp
+    /usr/bin/rm $LOCKDIR/toplock.file
+}
+
+sizeCollect() {
+    arch_dir=$(readlink -f "$dest/$1")
+    if [ "$arch_dir"x = ""x ] || [ $arch_dir = '/' ]; then
+        echo "Archive dest cannot be empty or root dir!"
+        exit -1
+    fi
+
+    nfiles=$(ls -t $arch_dir | wc -l)
+    if [ $nfiles -gt 0 ]; then
+        cur_archive=$arch_dir/$(ls -t $arch_dir|head -1)
+    else
+        cur_archive="$dest/$1/`hostname`_$1_`date +'%y.%m.%d.%H%M%S.dat'`"
+    fi
+
+    byte_limit_size=`expr $size \* 1000 \* 1000`
+
+    if [ -f $cur_archive ]; then
+        file_size=`ls -l $cur_archive|awk '{print $5}'`
+        if [ $file_size -gt $byte_limit_size ]; then
+            if [ $zipset = 1 ]; then
+                echo "zip set, ready to zip $cur_archive"
+                $zip $cur_archive
+            fi
+            new_archive="$dest/$1/`hostname`_$1_`date +'%y.%m.%d.%H%M%S.dat'`"
+            echo `/bin/uname` inspector $version `hostname` >> $new_archive
+            echo INTERVAL $interval >> $new_archive
+            cur_archive=$new_archive
+
+            # clear old archive
+            if [ $nfiles -ge $rotate ]
+            then
+                ls -t $arch_dir | tail -1 | xargs /usr/bin/rm
+            fi
+        fi
+    else
+        echo `/bin/uname` inspector $version `hostname` >> $cur_archive
+        echo INTERVAL $interval >> $cur_archive
+    fi
+
+    if [ $initial_log = 0 ] && [ $only_thresh = 1 ]; then
+        echo "INITIAL STATS" >> $cur_archive
+    fi
+
+    if [ -f $LOCKDIR/$1lock.file ]; then
+        echo "***Warning: $1 response is spanning collect intervals, please increase the interval."
+    else
+        touch $LOCKDIR/$1lock.file
+        echoCpuMemThreshInfo "$cur_archive"
+        $2 $cur_archive $1 "$3" &
+    fi
+}
+
+hourPeriodicCollect() {
+    newArchive="$dest/$1/`hostname`_$1_$hour"
+    oldArchive="$dest/$1/`hostname`_$1_$lasthour"
+
+    if [ $hour != $lasthour ]; then
+        echo `/bin/uname` inspector $version `hostname` >> $newArchive
+        echo INTERVAL $interval >> $newArchive
+
+        if [ $zipset = 1 ]; then
+            if [ -f $oldArchive ]; then
+                echo "zip set, ready to zip $oldArchive"
+                $zip $oldArchive
+            fi
+        fi
+
+        # clear archive
+        arch_dir=$(readlink -f "$dest/$1")
+        if [ "$arch_dir"x = ""x ] || [ $arch_dir = '/' ]; then
+            echo "Archive dest cannot be empty or root dir!"
+            exit -1
+        fi
+
+        files=`ls -t $arch_dir | wc -l`
+        if [ $files -gt $rotate ]
+        then
+            # dels=`expr $files - $rotate`
+            ls -t $arch_dir | tail -1 | xargs /usr/bin/rm
+        fi
+    fi
+
+    if [ -f $LOCKDIR/$1lock.file ]; then
+        echo "***Warning: $1 response is spanning collect intervals, please increase the interval."
+    else
+        touch $LOCKDIR/$1lock.file
+        echoCpuMemThreshInfo "$newArchive"
+        $2 $newArchive $1 "$3" &
+    fi
+}
+
+startSizeCollect() {
+    sizeCollect  vmstat    run_cmd      "$VMSTAT"
+    sizeCollect  mpstat    run_cmd      "$MPSTAT"
+    sizeCollect  iostat    run_iostat   "$IOSTAT"
+    sizeCollect  netstat   run_netstat  ""
+    sizeCollect  ifconfig  run_cmd      "$IFCONFIG"
+    sizeCollect  top       run_top      "$TOP"
+    sizeCollect  psmem     run_psmem    ""
+    sizeCollect  meminfo   run_cmd      "$MEMINFO"
+    sizeCollect  slabinfo  run_cmd      "$SLABINFO"
+    sizeCollect  df        run_cmd      "$DF"
+    sizeCollect  proc_snmp        run_cmd      "$PROC_SNMP"
+    sizeCollect  proc_snmp6       run_cmd      "$PROC_SNMP6"
+    sizeCollect  proc_netstat     run_cmd      "$PROC_NETSTAT"
+    sizeCollect  proc_sockstat    run_cmd      "$PROC_SOCKSTAT"
+    sizeCollect  proc_sockstat6   run_cmd      "$PROC_SOCKSTAT6"
+    sizeCollect  ip_neigh         run_cmd      "$IP_NEIGH"
+    sizeCollect  ip6_neigh        run_cmd      "$IP_NEIGH6"
+    sizeCollect  ip_route         run_cmd      "$IP_ROUTE"
+    sizeCollect  ip6_route        run_cmd      "$IP_ROUTE6"
+    sizeCollect  ip_rule          run_cmd      "$IP_RULE"
+    sizeCollect  ip6_rule         run_cmd      "$IP_RULE6"
+
+}
+
+printCpuMemThreshInfo() {
+    if [ $exceed_cpu = 1 ]; then
+        echo "Detect system exceeds cpu threshold: "`date`
+        echo "System cpu usage: ${sys_cpu_usage}%, threshold: ${cpu_thresh}%"
+    fi
+    if [ $exceed_mem = 1 ]; then
+        echo "Detect system exceeds memory threshold: "`date`
+        echo "System memory usage: ${sys_memory_usage}%, threshold: ${mem_thresh}%"
+    fi
+
+    if [ $recover_cpu = 1 ]; then
+        echo "Detect system cpu usage recovers: "`date`
+        echo "System cpu usage: ${sys_cpu_usage}%, threshold: ${cpu_thresh}%"
+    fi
+    if [ $recover_mem = 1 ]; then
+        echo "Detect system memory usage recovers: "`date`
+        echo "System memory usage: ${sys_memory_usage}%, threshold: ${mem_thresh}%"
+    fi
+}
+
+echoCpuMemThreshInfo() {
+    if [ $exceed_cpu = 1 ]; then
+        echo "Detect system exceeds cpu threshold: "`date` >> $1
+        echo "System cpu usage: ${sys_cpu_usage}%, threshold: ${cpu_thresh}%" >> $1
+    fi
+    if [ $exceed_mem = 1 ]; then
+        echo "Detect system exceeds memory threshold: "`date` >> $1
+        echo "System memory usage: ${sys_memory_usage}%, threshold: ${mem_thresh}%" >> $1
+    fi
+
+    if [ $recover_cpu = 1 ]; then
+        echo "Detect system cpu usage recovers: "`date` >> $1
+        echo "System cpu usage: ${sys_cpu_usage}%, threshold: ${cpu_thresh}%" >> $1
+    fi
+    if [ $recover_mem = 1 ]; then
+        echo "Detect system memory usage recovers: "`date` >> $1
+        echo "System memory usage: ${sys_memory_usage}%, threshold: ${mem_thresh}%" >> $1
+    fi
+}
+
+pwd > /tmp/osinspector.path
+echo $dest >> /tmp/osinspector.path
+
+lasthour="0"
+initial_log=0
+pre_stat=
+
+thresh_reached=0
+last_thresh_reached=0
+until test 0 -eq 1
+do
+    thresh_reached=0
+    exceed_cpu=0
+    exceed_mem=0
+    recover_cpu=0
+    recover_mem=0
+
+    if [ $cpu_thresh ]; then
+        if [ -z "$pre_stat" ]; then
+            pre_stat=`cat /proc/stat|head -1`
+            sleep 0.5
+        fi
+        cur_stat=`cat /proc/stat|head -1`
+
+        pre_idle=`echo $pre_stat|awk '{print $5}'`
+        pre_total=`echo $pre_stat|awk '{print $2+$3+$4+$5+$6+$7+$8+$9+$10+$11}'`
+
+        idle=`echo $cur_stat|awk '{print $5}'`
+        total=`echo $cur_stat|awk '{print $2+$3+$4+$5+$6+$7+$8+$9+$10+$11}'`
+
+        totald=`expr $total - $pre_total`
+
+        idled=`expr $idle - $pre_idle`
+        non_idled=`expr $totald - $idled`
+
+        sys_cpu_usage=`echo "$non_idled $totald"|awk "{print $non_idled/$totald*100}"|awk '{printf ("%.2f",$1)}'`
+        if [ `echo "$sys_cpu_usage > $cpu_thresh"|bc` -eq 1 ]; then
+            thresh_reached=1
+        fi
+        pre_stat=$cur_stat
+    fi
+
+    if [ $mem_thresh ]; then
+        sys_memory_usage=`cat /proc/meminfo|awk '{print $2}'|awk 'NR==1{tot=$1} NR==3{print (tot-$1)/tot*100}'|awk '{printf ("%.2f",$1)}'`
+        if [ `echo "$sys_memory_usage > $mem_thresh"|bc` -eq 1 ]; then
+            thresh_reached=1
+        fi
+    fi
+
+    if [ $thresh_reached = 1 ] && [ $last_thresh_reached = 0 ]; then
+        if [ $cpu_thresh ]; then
+            exceed_cpu=1
+            logger -t sysinspect -p local5.info "System cpu usage: ${sys_cpu_usage}%, exceeds threshold: ${cpu_thresh}%"
+        fi
+        if [ $mem_thresh ]; then
+            exceed_mem=1
+            logger -t sysinspect -p local5.info "System memory usage: ${sys_memory_usage}%, exceeds threshold: ${mem_thresh}%"
+        fi
+    fi
+    if [ $thresh_reached = 0 ] && [ $last_thresh_reached = 1 ]; then
+        if [ $cpu_thresh ]; then
+            recover_cpu=1
+            logger -t sysinspect -p local5.info "System cpu usage: ${sys_cpu_usage}%, recovers threshold: ${cpu_thresh}%"
+        fi
+        if [ $mem_thresh ]; then
+            recover_mem=1
+            logger -t sysinspect -p local5.info "System memory usage: ${sys_memory_usage}%, recovers threshold: ${mem_thresh}%"
+        fi
+    fi
+
+    if [ $sizeset = 1 ]; then
+        if [ $only_thresh = 1 ] && [ $initial_log = 0 ]; then
+            echo "Initial stats record: "`date`
+            startSizeCollect
+            initial_log=1
+            sleep $interval
+        fi
+
+        printCpuMemThreshInfo
+        if [ $only_thresh = 1 ]; then
+            if [ $exceed_cpu = 1 ] || [ $exceed_mem = 1 ] || [ $recover_cpu = 1 ] || [ $recover_mem = 1 ]; then
+                startSizeCollect
+            fi
+        else
+            echo "os inspector size rotate collect: "`date`
+            startSizeCollect
+        fi
+
+    else
+        hour=`date +'%y.%m.%d.%H00.dat'`
+        echo "os inspector hour rotate collect: "`date`
+        printCpuMemThreshInfo
+        hourPeriodicCollect  vmstat    run_cmd     "$VMSTAT"
+        hourPeriodicCollect  mpstat    run_cmd     "$MPSTAT"
+        hourPeriodicCollect  iostat    run_iostat  "$IOSTAT"
+        hourPeriodicCollect  netstat   run_netstat ""
+        hourPeriodicCollect  ifconfig  run_cmd     "$IFCONFIG"
+        hourPeriodicCollect  top       run_top     "$TOP"
+        hourPeriodicCollect  psmem     run_psmem   ""
+        hourPeriodicCollect  meminfo   run_cmd     "$MEMINFO"
+        hourPeriodicCollect  slabinfo  run_cmd     "$SLABINFO"
+        hourPeriodicCollect  df        run_cmd     "$DF"
+        hourPeriodicCollect  proc_snmp        run_cmd      "$PROC_SNMP"
+        hourPeriodicCollect  proc_snmp6       run_cmd      "$PROC_SNMP6"
+        hourPeriodicCollect  proc_netstat     run_cmd      "$PROC_NETSTAT"
+        hourPeriodicCollect  proc_sockstat    run_cmd      "$PROC_SOCKSTAT"
+        hourPeriodicCollect  proc_sockstat6   run_cmd      "$PROC_SOCKSTAT6"
+        hourPeriodicCollect  ip_neigh         run_cmd      "$IP_NEIGH"
+        hourPeriodicCollect  ip6_neigh        run_cmd      "$IP_NEIGH6"
+        hourPeriodicCollect  ip_route         run_cmd      "$IP_ROUTE"
+        hourPeriodicCollect  ip6_route        run_cmd      "$IP_ROUTE6"
+        hourPeriodicCollect  ip_rule          run_cmd      "$IP_RULE"
+        hourPeriodicCollect  ip6_rule         run_cmd      "$IP_RULE6"
+        lasthour=$hour
+    fi
+
+    last_thresh_reached=$thresh_reached
+    sleep $interval
+done
