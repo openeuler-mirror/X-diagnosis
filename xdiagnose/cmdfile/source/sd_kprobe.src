@@ -1,0 +1,14 @@
+p start
+static void scsi_softirq_done(struct request *rq)
+    maj = rq->rq_disk->major
+    min = rq->rq_disk->first_minor
+    sector = rq->__sector
+end
+
+p start
+static blk_status_t scsi_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq_queue_data *bd)
+    host = (struct scsi_device *)(bd->rq->q->queuedata)->host->host_no
+    channel = (struct scsi_device *)(bd->rq->q->queuedata)->channel
+    id = (struct scsi_device *)(bd->rq->q->queuedata)->id
+    lun = (struct scsi_device *)(bd->rq->q->queuedata)->lun
+end
