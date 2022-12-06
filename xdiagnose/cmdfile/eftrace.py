@@ -297,6 +297,7 @@ def get_length(type_name):
 def get_ftrace_offset(accs_mems):
     offsets = []
     mem_len = 0
+    inner_start = 0
     bit_len = ''
     is_mem_str = False
     struct_re = re.compile(r'(?:(?:struct)|(?:union))\W+(\w+)[*\s]*')
@@ -350,8 +351,12 @@ def get_ftrace_offset(accs_mems):
                 if str_sch:
                     is_mem_str = True
 
-        if type(prev_t) == list and len(offsets):
-            mem_off -= offsets[-1]
+        if type(m_type) == list:
+            inner_start = int(mem_offs[1])
+
+        if type(prev_t) == list and inner_start:
+            mem_off -= inner_start
+            inner_start = 0
 
         if accs_mems[i - 1] == '.':
             if not offsets:

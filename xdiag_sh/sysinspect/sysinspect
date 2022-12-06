@@ -81,7 +81,6 @@ fi
 test $zip
 if [ $? = 1 ]; then
     echo "Info: you did not enter a tool for compress. Use default gzip to compress"
-    zipset=1
     zip='gzip'
 fi
 
@@ -335,10 +334,9 @@ sizeCollect() {
     if [ -f $cur_archive ]; then
         file_size=`ls -l $cur_archive|awk '{print $5}'`
         if [ $file_size -gt $byte_limit_size ]; then
-            if [ $zipset = 1 ]; then
-                echo "zip set, ready to zip $cur_archive"
-                $zip $cur_archive
-            fi
+            echo "$zip compress $cur_archive"
+            $zip $cur_archive
+
             new_archive="$dest/$1/`hostname`_$1_`date +'%y.%m.%d.%H%M%S.dat'`"
             echo `/bin/uname` inspector $version `hostname` >> $new_archive
             echo INTERVAL $interval >> $new_archive
@@ -347,7 +345,7 @@ sizeCollect() {
             # clear old archive
             if [ $nfiles -ge $rotate ]
             then
-                ls -t $arch_dir | tail -1 | xargs /usr/bin/rm
+                ls -t $arch_dir/* | tail -1 | xargs /usr/bin/rm
             fi
         fi
     else
@@ -376,11 +374,9 @@ hourPeriodicCollect() {
         echo `/bin/uname` inspector $version `hostname` >> $newArchive
         echo INTERVAL $interval >> $newArchive
 
-        if [ $zipset = 1 ]; then
-            if [ -f $oldArchive ]; then
-                echo "zip set, ready to zip $oldArchive"
-                $zip $oldArchive
-            fi
+        if [ -f $oldArchive ]; then
+            echo "$zip compress $oldArchive"
+            $zip $oldArchive
         fi
 
         # clear archive
@@ -394,7 +390,7 @@ hourPeriodicCollect() {
         if [ $files -gt $rotate ]
         then
             # dels=`expr $files - $rotate`
-            ls -t $arch_dir | tail -1 | xargs /usr/bin/rm
+            ls -t $arch_dir/* | tail -1 | xargs /usr/bin/rm
         fi
     fi
 
@@ -556,13 +552,13 @@ do
                 startSizeCollect
             fi
         else
-            echo "os inspector size rotate collect: "`date`
+            echo "sys inspector size rotate collect: "`date`
             startSizeCollect
         fi
 
     else
         hour=`date +'%y.%m.%d.%H00.dat'`
-        echo "os inspector hour rotate collect: "`date`
+        echo "sys inspector hour rotate collect: "`date`
         printCpuMemThreshInfo
         hourPeriodicCollect  vmstat    run_cmd     "$VMSTAT"
         hourPeriodicCollect  mpstat    run_cmd     "$MPSTAT"

@@ -79,16 +79,19 @@ class LogCommonCheck(object):
 
         MemTotal = int(meminfo['MemTotal'])
         MemAvailable = int(meminfo['MemAvailable'])
-        memory_percent = (MemTotal - MemAvailable) * 100 / MemTotal
+
+        if MemTotal != 0 and MemAvailable != 0:
+            memory_percent = (MemTotal - MemAvailable) * 100 / MemTotal
+            if memory_percent > 80:
+                logger.info('The memory has used over %d%%' % memory_percent)
 
         SwapTotal = int(meminfo['SwapTotal'])
         SwapFree = int(meminfo['SwapFree'])
-        swap_percent = (SwapTotal - SwapFree) * 100 / SwapTotal
 
-        if memory_percent > 80:
-            logger.info('The memory has used over %d%%' % memory_percent)
-        if swap_percent > 70:
-            logger.info('The swap memory has used over %d%%' % swap_percent)
+        if SwapTotal != 0 and SwapFree != 0:
+            swap_percent = (SwapTotal - SwapFree) * 100 / SwapTotal
+            if swap_percent > 70:
+                logger.info('The swap memory has used over %d%%' % swap_percent)
 
     def get_sysctl_diff(self):
         self.diff = {}

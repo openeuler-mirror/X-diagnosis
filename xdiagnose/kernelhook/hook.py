@@ -464,7 +464,7 @@ def main():
             version = VERSION_5
         else:
             print(versions)
-            print('Please check os version.')
+            print('Please check EulerOS version.')
             print('Support 2.5 2.7 2.8 2.9 and 2.10')
             return
 
