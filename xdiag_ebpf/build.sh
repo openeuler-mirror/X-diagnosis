@@ -30,10 +30,10 @@ function build()
 		ln -s bpftool_${ARCH} bpftool
 	}
 
-	[ ! -f "vmlinux.h" ]&& {
+	[ ! -f ${VMLINUX_H} ]&& {
+		echo "go to gen vmlinux.h"
 		./bpftool btf dump file ${1:-/sys/kernel/btf/vmlinux} format c > ${VMLINUX_H}
 	}
-	echo "gen vmlinux.h"
 	echo ${SRC_DIR}
 	cd ${SRC_DIR}
 	echo "start compile"
