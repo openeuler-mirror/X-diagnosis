@@ -9,7 +9,7 @@ VMLINUX_H=${VMLINUX_DIR}/vmlinux.h
 function print_help()
 {
 	echo "Usage: $0 OPERATOR OPTIONS"
-    echo "OPERATOR: "
+    	echo "OPERATOR: "
 	echo "	-i build and install"
 	echo "	-b build"
 	echo "	-c clean"
@@ -28,6 +28,7 @@ function build()
 	ARCH=$(uname -m)
 	[ ! -f "bpftool" ] && {
 		ln -s bpftool_${ARCH} bpftool
+		chmod 777 bpftool
 	}
 
 	[ ! -f ${VMLINUX_H} ]&& {
