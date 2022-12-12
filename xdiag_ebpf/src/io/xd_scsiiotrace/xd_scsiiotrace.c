@@ -185,7 +185,9 @@ static struct env {
 	bool filter_error;
 	struct scsi_sdev sdev;
 	int parse_result;
+	bool is_parse_result;
 } env = {
+	.is_parse_result = false,
 	.filter_error = false,
 	.sdev.host = -1,
 	.sdev.channel = -1,
@@ -223,8 +225,10 @@ static error_t parse_arg(int key, char *arg, struct argp_state *state)
 		env.filter_error = true;
 		break;
 	case 'p':
-		if (arg)
+		if (arg) {
 			sscanf(arg, "%x", &env.parse_result);
+			env.is_parse_result = true;
+		}
 		break;
 	case 'd':
 		env.disk = arg;
@@ -395,7 +399,7 @@ int main(int argc, char **argv)
 	signal(SIGINT, sig_handler);
 	signal(SIGTERM, sig_handler);
 
-	if (env.parse_result)
+	if (env.is_parse_result)
 		return parse_scsi_cmnd_result(env.parse_result);
 
 	skel = xd_scsiiotrace_bpf__open_and_load();
