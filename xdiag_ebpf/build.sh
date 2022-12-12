@@ -33,6 +33,9 @@ function build()
 
 	[ ! -f ${VMLINUX_H} ]&& {
 		echo "go to gen vmlinux.h"
+		[ ! -d ${VMLINUX_DIR} ]&& {
+			mkdir -p ${VMLINUX_DIR}
+		}
 		./bpftool btf dump file ${1:-/sys/kernel/btf/vmlinux} format c > ${VMLINUX_H}
 	}
 	echo ${SRC_DIR}
