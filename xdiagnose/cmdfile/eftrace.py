@@ -7,7 +7,9 @@ import glob
 from collections import OrderedDict
 from subprocess import getstatusoutput
 
-__all__ = ['EftraceModule', 'read_source_file', 'parse_multi_cmds']
+
+__all__ = ['EftraceModule', 'read_source_file',
+           'parse_multi_cmds', 'xd_make_cmd']
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 uname_r = ''

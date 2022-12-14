@@ -3,11 +3,9 @@ from setuptools import setup, find_packages
 
 setup(
     name="xdiagnose",
-    version="1.0",
-    author="euleros_maintain",
-    author_email="maintain.euleros@huawei.com",
-    description="Diagnose euleros system tool",
-    url="http://maintain.euleros.huawei.com",
+    version="1.0.1",
+    description="System diagnostic tool set",
+    url="https://gitee.com/openeuler/X-diagnosis",
     packages=find_packages(),
     include_package_data=True,
     classifiers=[
