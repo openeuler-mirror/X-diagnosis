@@ -4,13 +4,14 @@ import signal
 import time
 import traceback
 
-from xdiagnose.common.logger import logger
-from xdiagnose.common.arguments import parser
-from xdiagnose.inspect.inspect import Inspector
-from xdiagnose.ntrace.enter import NetModule
-from xdiagnose.cmdfile.eftrace import EftraceModule
-from xdiagnose.tcp_hand_check.tcp_hand_check import TcpHandCheckModule
-from xdiagnose.kernelhook.hook import HookModule
+from .arguments import parser
+from .utils.logger import logger
+from .sysinfo.sysmonitor.inspect import Inspector
+from .cmdfile.eftrace import EftraceModule
+
+from .net.ntrace.enter import NetModule
+from .net.kernelhook.hook import HookModule
+from .net.tcp_hand_check.tcp_hand_check import TcpHandCheckModule
 
 
 inspector = None
@@ -58,7 +59,7 @@ def main():
     except Exception:
         logger.error('%s' % traceback.format_exc())
     finally:
-        if mod:
+        if mod and hasattr(mod, 'stop'):
             mod.stop()
         if inspector:
             inspector.stop_inspect()
