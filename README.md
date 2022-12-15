@@ -63,7 +63,6 @@ select module:
 **tcphandcheck：跟踪tcp的3次握手阶段经常会出现问题，支持定位如下问题：**
 * 连接队列满
 * bind失败
-* connect失败
 * timewait链接复用失败
 * 文件句柄超出导致无法创建socket
 * 端口复用场景下链接闪断后seq序号异常导致的无法建链

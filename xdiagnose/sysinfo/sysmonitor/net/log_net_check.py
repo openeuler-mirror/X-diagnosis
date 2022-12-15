@@ -52,6 +52,8 @@ class LogNetCheck(object):
 
     def get_num(self):
         for k, v in self.log.items():
+            if k == "ip6route_cache":
+                continue
             self.num[k] = 0
             if v[2]:
                 lines = v[2].split(' ')
