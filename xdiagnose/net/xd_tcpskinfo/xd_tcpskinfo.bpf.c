@@ -6,22 +6,13 @@
 #define BPF_PROBE_VAL(P) \
 ({typeof(P) val = 0; bpf_probe_read(&val, sizeof(val), &P); val;})
 
-
-#define bpf_printk(fmt, ...)                    \
-({                              \
-           char ____fmt[] = fmt;                \
-           bpf_trace_printk(____fmt, sizeof(____fmt),   \
-                ##__VA_ARGS__);         \
-})
-
-
-struct bpf_map_def SEC("maps") tcpinfo_map = {
-        .type = BPF_MAP_TYPE_HASH,
-        .key_size = sizeof(struct sock_key),
-        .value_size = sizeof(struct tcpinfo_xdiag),
-        .max_entries = 10240,
-};
-
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, struct sock_key);
+    __type(value, struct tcpinfo_xdiag);
+    /* max socket numbers */
+    __uint(max_entries, 65536);
+} tcpinfo_map SEC(".maps");
 
 SEC("kprobe/tcp_get_info")
 int bpf_tcp_get_info(struct pt_regs *ctx)
@@ -76,7 +67,7 @@ int bpf_tcp_get_info(struct pt_regs *ctx)
     /* ipv6 */
     } else if (BPF_PROBE_VAL(sk->sk_family) == AF_INET6){
         if(!pinet6){
-            bpf_printk(":::icsk_inet->pinet6 is NULL\n");
+            bpf_printk("icsk_inet->pinet6 is NULL\n");
             return 0;
         }
         key.saddr[0] = BPF_PROBE_VAL(pinet6->saddr.s6_addr32[0]); 

@@ -8,41 +8,33 @@
 #define BPF_PROBE_VAL(P) \
 ({typeof(P) val = 0; bpf_probe_read(&val, sizeof(val), &P); val;})
 
+struct {
+    __uint(type, BPF_MAP_TYPE_STACK_TRACE);
+    __type(key, u32);
+    __uint(value_size, XDIAG_KERN_STACK_DEPTH * sizeof(u64));
+    /* Number of possible call stacks */
+    __uint(max_entries, 256);
+} stack_map SEC(".maps");
 
-#define bpf_printk(fmt, ...)                    \
-({                              \
-           char ____fmt[] = fmt;                \
-           bpf_trace_printk(____fmt, sizeof(____fmt),   \
-                ##__VA_ARGS__);         \
-})
-
-
-struct bpf_map_def SEC("maps") stack_map = {
-    .type = BPF_MAP_TYPE_STACK_TRACE,
-    .key_size = sizeof(u32),
-    .value_size = XDIAG_KERN_STACK_DEPTH * sizeof(u64),
-    .max_entries = 10000,
-};
-
-struct bpf_map_def SEC("maps") stackinfo_map = {
-    .type = BPF_MAP_TYPE_HASH,
-    .key_size = sizeof(struct key_xd_tcpreststack),
-    .value_size = sizeof(u32),
-    .max_entries = 10000,
-};
-
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, struct key_xd_tcpreststack);
+    __type(value, u32);
+    /* balance between memory usage and monitoring scope */
+    __uint(max_entries, 4096);
+} stackinfo_map SEC(".maps");
 
 static __inline int get_reset_stack(struct pt_regs *ctx)
 {
     u32 one = 1;
     u32 *val;
     struct sock *sk;
-	struct tcp_sock *tcp_sk;
+    struct tcp_sock *tcp_sk;
     struct ipv6_pinfo *pinet6;
     struct inet_connection_sock *icsk;
     struct key_xd_tcpreststack key = {0};
 
-	sk = (struct sock *)PT_REGS_PARM1(ctx);
+    sk = (struct sock *)PT_REGS_PARM1(ctx);
     if(!sk){
         bpf_printk("tcp_reset_stack: sk is NULL\n");
     }
@@ -58,7 +50,7 @@ static __inline int get_reset_stack(struct pt_regs *ctx)
         return -1;
     }
 
-	key.sport = BPF_PROBE_VAL(tcp_sk->inet_conn.icsk_inet.inet_sport);
+    key.sport = BPF_PROBE_VAL(tcp_sk->inet_conn.icsk_inet.inet_sport);
     key.dport = BPF_PROBE_VAL(tcp_sk->inet_conn.icsk_inet.inet_dport);
     key.protocol = 0;
     key.family = BPF_PROBE_VAL(sk->sk_family);
@@ -70,7 +62,7 @@ static __inline int get_reset_stack(struct pt_regs *ctx)
     /* ipv6 */
     } else if (BPF_PROBE_VAL(sk->sk_family) == AF_INET6){
         if(!pinet6){
-            bpf_printk(":::icsk_inet->pinet6 is NULL\n");
+            bpf_printk("icsk_inet->pinet6 is NULL\n");
             return 0;
         }
         key.saddr[0] = BPF_PROBE_VAL(pinet6->saddr.s6_addr32[0]);

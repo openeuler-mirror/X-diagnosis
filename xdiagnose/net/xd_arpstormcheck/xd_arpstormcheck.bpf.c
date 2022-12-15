@@ -9,20 +9,13 @@
 #define BPF_PROBE_VAL(P) \
 ({typeof(P) val = 0; bpf_probe_read(&val, sizeof(val), &P); val;})
 
-
-#define bpf_printk(fmt, ...)                    \
-({                              \
-           char ____fmt[] = fmt;                \
-           bpf_trace_printk(____fmt, sizeof(____fmt),   \
-                ##__VA_ARGS__);         \
-})
-
-struct bpf_map_def SEC("maps") arpcheck_map = {
-    .type = BPF_MAP_TYPE_HASH,
-    .key_size = sizeof(struct key_xarp),
-    .value_size = sizeof(u32),
-    .max_entries = 4096,
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, struct key_xarp);
+    __type(value, u32);
+    /* balance between memory usage and monitoring scope */
+    __uint(max_entries, 4096);
+} arpcheck_map SEC(".maps");
 
 SEC("kprobe/arp_rcv")
 int bpf_arp_rcv(struct pt_regs *ctx)

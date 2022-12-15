@@ -1,10 +1,3 @@
-/*
- * 
- * Author: Zhanzhan Yu
- * Create:
- */
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -31,10 +24,9 @@
 #include "common_u.h"
 #include "xd_arpstormcheck.skel.h"
 
-#define MAX_SYMS 300000
-
 static int map_fd;
 static unsigned int interval_time = 1;
+/* arp storm frequency threshold, default 100 times(per second) */
 static unsigned int filter_freq = 100;
 static unsigned int check_count = 1;
 static unsigned int running = 1;

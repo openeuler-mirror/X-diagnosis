@@ -80,9 +80,9 @@ struct pr_buffer {
 } buffer;
 
 /* for filter */
-static short is_port_filter;
-static short filter_port;
-static short is_addr_filter;
+static unsigned short is_port_filter;
+static unsigned short filter_port;
+static unsigned short is_addr_filter;
 static int filter_addr[4];
 
 /* bpf fd*/

@@ -34,7 +34,9 @@ static int sym_cnt;
 static int stack_mapfd;
 static int stack_infofd;
 /* For Input Parameter */
+/* depth of kernel stack, default 3 */
 static int stack_depth = 3;
+/* interval time of detection, default 200 */
 static int interval_time = 200;
 
 static const struct option long_opts[] = {
