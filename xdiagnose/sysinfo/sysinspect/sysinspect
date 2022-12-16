@@ -475,11 +475,14 @@ lasthour="0"
 initial_log=0
 pre_stat=
 
-thresh_reached=0
-last_thresh_reached=0
+cpu_thresh_reached=0
+mem_thresh_reached=0
+last_cpu_thresh_reached=0
+last_mem_thresh_reached=0
 until test 0 -eq 1
 do
-    thresh_reached=0
+    cpu_thresh_reached=0
+    mem_thresh_reached=0
     exceed_cpu=0
     exceed_mem=0
     recover_cpu=0
@@ -505,7 +508,7 @@ do
 
         sys_cpu_usage=`echo "$non_idled $totald"|awk "{print $non_idled/$totald*100}"|awk '{printf ("%.2f",$1)}'`
         if [ `echo "$sys_cpu_usage > $cpu_thresh"|bc` -eq 1 ]; then
-            thresh_reached=1
+            cpu_thresh_reached=1
         fi
         pre_stat=$cur_stat
     fi
@@ -513,25 +516,29 @@ do
     if [ $mem_thresh ]; then
         sys_memory_usage=`cat /proc/meminfo|awk '{print $2}'|awk 'NR==1{tot=$1} NR==3{print (tot-$1)/tot*100}'|awk '{printf ("%.2f",$1)}'`
         if [ `echo "$sys_memory_usage > $mem_thresh"|bc` -eq 1 ]; then
-            thresh_reached=1
+            mem_thresh_reached=1
         fi
     fi
 
-    if [ $thresh_reached = 1 ] && [ $last_thresh_reached = 0 ]; then
+    if [ $cpu_thresh_reached = 1 ] && [ $last_cpu_thresh_reached = 0 ]; then
         if [ $cpu_thresh ]; then
             exceed_cpu=1
             logger -t sysinspect -p local5.info "System cpu usage: ${sys_cpu_usage}%, exceeds threshold: ${cpu_thresh}%"
         fi
+    fi
+    if [ $mem_thresh_reached = 1 ] && [ $last_mem_thresh_reached = 0 ]; then
         if [ $mem_thresh ]; then
             exceed_mem=1
             logger -t sysinspect -p local5.info "System memory usage: ${sys_memory_usage}%, exceeds threshold: ${mem_thresh}%"
         fi
     fi
-    if [ $thresh_reached = 0 ] && [ $last_thresh_reached = 1 ]; then
+    if [ $cpu_thresh_reached = 0 ] && [ $last_cpu_thresh_reached = 1 ]; then
         if [ $cpu_thresh ]; then
             recover_cpu=1
             logger -t sysinspect -p local5.info "System cpu usage: ${sys_cpu_usage}%, recovers threshold: ${cpu_thresh}%"
         fi
+    fi
+    if [ $mem_thresh_reached = 0 ] && [ $last_mem_thresh_reached = 1 ]; then
         if [ $mem_thresh ]; then
             recover_mem=1
             logger -t sysinspect -p local5.info "System memory usage: ${sys_memory_usage}%, recovers threshold: ${mem_thresh}%"
@@ -584,6 +591,7 @@ do
         lasthour=$hour
     fi
 
-    last_thresh_reached=$thresh_reached
+    last_cpu_thresh_reached=$cpu_thresh_reached
+    last_mem_thresh_reached=$mem_thresh_reached
     sleep $interval
 done
