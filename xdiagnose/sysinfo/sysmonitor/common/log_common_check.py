@@ -1,6 +1,7 @@
 # coding: utf-8
 import socket
 import threading
+import traceback
 
 from subprocess import getstatusoutput
 from xdiagnose.utils.logger import inspect_warn_logger as logger
@@ -8,14 +9,12 @@ from xdiagnose.utils.logger import inspect_warn_logger as logger
 class LogCommonCheck(object):
 
     def __init__(self):
-        self.cmd = {'sysctl'    : 'cat /etc/sysctl.conf',
-                    'arping'    : 'arping -D -c 3',
+        self.cmd = {'sysctl'    : 'sysctl -a',
+                    'arping'    : 'arping -w 3 -c 1',
                     'memory'    : 'cat /proc/meminfo',
                     'sshd'      : 'cat /etc/ssh/sshd_config',
                     'disk'      : 'df -h',
                     'inode'     : 'df -i'}
-
-        self.old_stats = {'sysctl' : 'NA'}
 
         self.sshd_config = {'AllowUsers'        : 'NA',
                             'DenyUsers'         : 'NA',
@@ -24,19 +23,21 @@ class LogCommonCheck(object):
                             'PermitRootLogin'   : 'NA',
                             'UsePAM'            : 'NA'}
 
-        self.service_status = {}
-
+        self.sysctl_stats = {}
+        self.service_stats = {}
         self.diff = {}
+
+        self.sysctl_init()
 
     def service_status_check(self, name):
         cmd = 'systemctl status ' + name
         stats = getstatusoutput(cmd)
 
-        if name not in self.service_status:
-            self.service_status[name] = 0
+        if name not in self.service_stats:
+            self.service_stats[name] = 0
 
-        if self.service_status[name] != stats[0]:
-            self.service_status[name] = stats[0]
+        if self.service_stats[name] != stats[0]:
+            self.service_stats[name] = stats[0]
 
             if stats[0] == 0:
                 logger.info('service %s is active' % name)
@@ -93,48 +94,43 @@ class LogCommonCheck(object):
             if swap_percent > 70:
                 logger.info('The swap memory has used over %d%%' % swap_percent)
 
+    def sysctl_init(self):
+        f = open("/etc/sysctl.conf", 'r')
+        lines = f.readlines()
+
+        for line in lines:
+            if line == '' or line[0] == '#':
+                continue
+
+            elems = line.split('=')
+            self.sysctl_stats[elems[0]] = 'NA'
+
+        f.close()
+
     def get_sysctl_diff(self):
         self.diff = {}
-
-        if not self.old_stats['sysctl']:
-            return self.diff
 
         stats = getstatusoutput(self.cmd['sysctl'])
         if stats[0] != 0:
             logger.info('%s is not available' % self.cmd['sysctl'])
             return self.diff
 
-        if self.old_stats['sysctl'] == 'NA':
-            self.old_stats['sysctl'] = stats[1]
-            return self.diff
-
         try:
-            old_lines = self.old_stats['sysctl'].split('\n')
-            new_lines = stats[1].split('\n')
+            lines = stats[1].split('\n')
 
-            if len(old_lines) != len(new_lines):
-                logger.info('%s line numbers not equal' % self.cmd['sysctl'])
-                return self.diff
+            for line in lines:
+                elems = line.split()
 
-            for i in range(len(new_lines)):
-                if new_lines[i] == '' or new_lines[i][0] == '#':
-                    continue
+                if elems[0] in self.sysctl_stats and self.sysctl_stats[elems[0]] != elems[2]:
+                    if self.sysctl_stats[elems[0]] == 'NA':
+                        self.diff[elems[0]] = elems[2]
+                    else:
+                        self.diff[elems[0]] = self.sysctl_stats[elems[0]] + ' -> ' + elems[2]
 
-                if new_lines[i] == old_lines[i]:
-                    continue
+                    self.sysctl_stats[elems[0]] = elems[2]
 
-                old_elems = old_lines[i].split('=')
-                new_elems = new_lines[i].split('=')
-
-                if len(old_elems) != len(new_elems):
-                    logger.info('%s elems numbers not equal' % self.cmd['sysctl'])
-                    return self.diff
-
-                if old_elems[1] != new_elems[1]:
-                    self.diff[new_elems[0]] = old_elems[1] + ' -> ' + new_elems[1]
-
-        finally:
-            self.old_stats['sysctl'] = stats[1]
+        except Exception:
+            logger.error('%s' % traceback.format_exc())
 
         return self.diff
 
@@ -143,12 +139,23 @@ class LogCommonCheck(object):
         for k, v in stats.items():
             logger.info('[%s]%s: %s' % ('sysctl_check', k, v))
 
+    def fd_check(self):
+        f = open("/proc/sys/fs/file-nr", 'r')
+        line = f.readline()
+        elems = line.split()
+
+        if int(elems[0]) != 0:
+            fd_used = int(elems[0]) * 100 / int(elems[2])
+
+            if fd_used > 90:
+                logger.info('[%s]%s has used over %d%%' % ('fd_check', fd_used))
+
     def ntp_check(self):
         cmd = 'ntpd'
         if self.service_status_check(cmd):
             return
 
-        cmd = 'ntpq -p'
+        cmd = 'ntpq -pn'
         stats = getstatusoutput(cmd)
         if stats[0] != 0:
             logger.info('%s is not available' % cmd)
@@ -160,8 +167,10 @@ class LogCommonCheck(object):
 
             if ntp_server[0][0] == '*':
                 ip_addr = ntp_server[0][1:]
-                cmd = 'ntpdate -d ' + ip_addr
+                if ip_addr[:7] == '127.127':
+                    return
 
+                cmd = 'ntpdate -d ' + ip_addr
                 stats = getstatusoutput(cmd)
                 if stats[0] != 0:
                     logger.info('%s is not available' % cmd)
@@ -170,12 +179,15 @@ class LogCommonCheck(object):
         cmd = 'ntpq -p'
         logger.info('[ntp_check] ntp server status error, use <%s> show deatils' % cmd)
 
-    def ip_conflict_check(self, ip_addr = '', device = ''):
+    def ip_conflict_check(self, ip_addr = '', device = 'eth0'):
         if ip_addr == '':
             try:
                 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 s.connect(('8.8.8.8', 80))
                 ip_addr = s.getsockname()[0]
+
+            except Exception:
+                logger.error('%s' % traceback.format_exc())\
 
             finally:
                 s.close()
@@ -187,7 +199,11 @@ class LogCommonCheck(object):
 
         stats = getstatusoutput(cmd)
         if stats[0] != 0:
-            logger.info('[%s]%s\n%s' % ('ip_conflict_check', cmd, stats[1]))
+            lines = stats[1].split('\n')
+            if lines[len(lines) - 1] == 'Received 0 response(s)':
+                return
+
+            logger.info('[%s]%s return code = %d\n%s' % ('ip_conflict_check', cmd, stats[0], stats[1]))
 
     def get_sshd_diff(self):
         self.diff = {}
@@ -235,6 +251,7 @@ class LogCommonCheck(object):
         self.disk_check(self.cmd['inode'])
         self.memory_check(self.cmd['memory'])
         self.sysctl_check(self.cmd['sysctl'])
+        self.fd_check()
         self.ntp_check()
         self.sshd_check()
         self.ip_conflict_check()
