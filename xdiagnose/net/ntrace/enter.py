@@ -22,6 +22,9 @@ class NetModule(object):
 
         if args.protocol in protos:
             self.npara = protos[args.protocol](args)
+            self.npara.args.brief = 0
+            self.npara.args.retrans = 0
+            self.npara.args.mode = 1
         else:
             raise NotImplementedError()
 

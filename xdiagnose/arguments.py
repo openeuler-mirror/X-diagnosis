@@ -39,16 +39,9 @@ parser_net.add_argument('-t',
                         '--timeout',
                         type=int, default=0,
                         help='specify a running time of process')
-parser_net.add_argument('--qlen',
-                        type=int, default=50,
-                        help='specify a tc queue length to monitor')
 parser_net.add_argument('--cpu_mask',
                         type=str, default='',
                         help='set ftrace cpu tracing_mask')
-parser_net.add_argument('-b',
-                        '--brief',
-                        action='store_true',
-                        help='brief output')
 parser_net.add_argument('-i', '--interface', type=str,
                         help='specify an interface')
 
@@ -59,13 +52,6 @@ net_subparser = parser_net.add_subparsers(dest='protocol',
 
 # net protocol tcp arguments
 parser_tcp = net_subparser.add_parser('tcp', help='tcp protocol')
-parser_tcp.add_argument('--retrans',
-                        type=int, help='TCP retransmit limit')
-parser_tcp.add_argument('-m',
-                        '--mode',
-                        type=int, default=1,
-                        help='the amount of trace functions, '
-                             'default 1, full mode 8')
 parser_tcp.add_argument('expression',
                         nargs='*', type=str,
                         help='filter expression')

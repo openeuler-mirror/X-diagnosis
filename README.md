@@ -157,7 +157,6 @@ optional arguments:
                         trace write to a specified file
   -t TIMEOUT, --timeout TIMEOUT
                         specify a running time of process
-  --qlen QLEN           specify a tc queue length to monitor
   --cpu_mask CPU_MASK   set ftrace cpu tracing_mask
   -i INTERFACE, --interface INTERFACE
                         specify an interface
@@ -168,16 +167,12 @@ select protocol:
     udp                 udp protocol
     icmp                icmp protocol
 ```
-**expression** ：指定一个过滤报文的表达式，协议[tcp|udp]，地址[host|src|dst]，端口号[port|sport|dport]，逻辑运算符[and|or]。 
+**expression** ：指定一个过滤报文的表达式，协议[tcp|udp]，地址[host|src|dst]，端口号[port|sport|dport]，逻辑运算符[and|or]。   
 **-r** READFILE：读取一个已存在的trace输出文件，比如/var/log/x-diagnose/rawlog/raw_diag.log    
 **-w** WRITEFILE：将trace命令日志写入文件  
-**-i** INTERVAL：系统状态数据获取的时间间隔  
+**-i** INTERFACE：指定抓取的网卡  
 **-t** TIMEOUT：运行时间，单位为秒  
-**-m** MODE：跟踪函数集，缺省是1，全量函数集是8  
-**--qlen** TCQLEN：设置跟踪的tc队列长度  
-**--cpu** CPUMASK：设置ftrace的cpumask用以跟踪指定的cpu  
-**--pingtimeout** TIMEOUT：设置ping超时时间(icmp模式下使用)  
-**--num** RETRANS：设置跟踪TCP重传的次数，超过阈值告警
+**--cpu_mask** CPU_MASK：设置ftrace的cpumask用以跟踪指定的cpu
 
 ***说明***：
 由于使用ftrace实现，xdiag下的select module功能模块不能复用
