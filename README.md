@@ -230,16 +230,16 @@ Usage: xd_arpstormcheck [ OPTIONS ]
 #### -f,--freq 
 监控的告警阈值，每秒收到的报文，超过了此阈值，则告警提示网络风暴相关信息；
 
-### 1.4 scsiiotrace
+### 1.4 xd_scsiiotrace
 
 ```shell
-USAGE: scsiiotrace [--help] [-d h:c:t:l] [-E]
+USAGE: xd_scsiiotrace [--help] [-d h:c:t:l] [-E]
 
 EXAMPLES:
-    scsiiotrace                 # Report all scsi cmnd result
-    scsiiotrace -E              # Report error/timeout scsi cmnd result
-    scsiiotrace -p 0x8000002    # Parse the scsi cmnd result.
-    scsiiotrace -d 0:0:0:1      # Trace the scsi device only.
+    xd_scsiiotrace                 # Report all scsi cmnd result
+    xd_scsiiotrace -E              # Report error/timeout scsi cmnd result
+    xd_scsiiotrace -p 0x8000002    # Parse the scsi cmnd result.
+    xd_scsiiotrace -d 0:0:0:1      # Trace the scsi device only.
 
   -d, --device=h:c:t:l       Trace this scsi device only
   -E, --error                Trace error/timeout scsi cmnd. (default trace all
@@ -265,16 +265,16 @@ DISPOSION：
 #### -p,--parse 
 用于解析 DRIVER_RESULT或者SCSI_RESULT值具体含义. 默认显示hex值
 
-### 1.5 scsiiocount
+### 1.5 xd_scsiiocount
 
 ```shell
-USAGE: scsiiocount [--help] [-t times] [-d device] [-i interval]
+USAGE: xd_scsiiocount [--help] [-t times] [-d device] [-i interval]
 
 EXAMPLES:
-    scsiiocount                 # report all scsi device I/O scsi cmnd count
-    scsiiocount -i 10           # print 10 second summaries
-    scsiiocount -d sdc			# Trace sdc only
-    scsiiocount -t 5           	# report times
+    xd_scsiiocount		# report all scsi device I/O scsi cmnd count
+    xd_scsiiocount -i 10	# print 10 second summaries
+    xd_scsiiocount -d sdc	# Trace sdc only
+    xd_scsiiocount -t 5		# report times
 
   -d, --device=device        Trace this disk only
   -i, --interval=interval    refresh interval(secs)
@@ -290,3 +290,56 @@ EXAMPLES:
 监控的时间间隔，默认5s。
 #### -t,--times 
 监控的次数. 次数达到后，则结束本次监控
+
+### 1.6 xd_ext4fsstat
+
+```shell
+USAGE: xd_ext4fstat [--help] [-t times] [-i interval] [-s SORT] [-o opcode]
+
+EXAMPLES:
+    xd_ext4fsstat#Trace file read/write stat for ext4 filesystem
+    xd_ext4fsstat -i 10#printf 10 second summaries
+    xd_ext4fsstat -m /mnt/test#Trace the special mount point for ext4 filesystem.
+    xd_ext4fsstat -s r#Sort the read bytes
+    xd_ext4fsstat -o r#Trace read only, default read and wriete
+    xd_ext4fsstat -t 5#Trace 5 times
+    xd_ext4fsstat -v p#show the pid view
+
+  -c, --clean                Clean the trace data
+  -C, --clear                Clear the screen
+  -i, --interval=INTERVAL    Refreash interval(secs), default 5s.
+  -m, --mnt=MNTPOINT         the special mount point
+  -o, --opcode=OPCODE        Trace file r/w, defalut both.
+  -p, --pid=PID              Trace the pid only
+  -s, --sort=SORT            Sort r/w/wb, default read
+  -t, --times=TIMES          Trace times
+  -T, --top=TOP              show the topN (1~8192)
+  -v, --view=VIEW            p:pids view, f: files view, defaut file view
+  -?, --help                 Give this help list
+      --usage                Give a short usage message
+```
+#### 功能：
+用于监控ext4 文件系统读/写数据量统计.
+#### -c,--clean
+每个周期统计完数据后，历史数据将被清空，重新统计，默认是累积.
+#### -C,--clear
+每个周期显示统结果后，清理屏幕
+#### -i,--interval
+监控的时间间隔，默认5s.
+#### -m,--mnt
+指定监控特定ext4挂载点数据.
+#### -o,--opcode
+指定监控read或者write,默认两者都监控.
+#### -p,--pid
+指定监控特定pid.
+#### -s,--sort
+指定对监控数据进行排序，默认对read进行排序.
+#### -t,--times
+监控的次数. 次数达到后，则结束本次监控.
+#### -T,--top
+指定只显示top数据，默认显示所有监控到的数据.
+#### -v,--view
+指定显示模式，p:进程模式，f:文件默认，默认只显示文件模式
+注：进程模式下，多进程对同一有写入场景下，显示的writeback数据为文件写入总数据
+    非该单进程写入总数据.
+####
