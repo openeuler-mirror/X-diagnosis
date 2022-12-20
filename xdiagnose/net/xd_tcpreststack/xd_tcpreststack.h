@@ -7,7 +7,7 @@
 #define TASK_COMM_LEN           16
 #endif
 
-struct key_xd_tcpreststack {
+struct event_tcpreststack {
     pid_t pid;
     char comm[TASK_COMM_LEN];
     unsigned int kstack_id;

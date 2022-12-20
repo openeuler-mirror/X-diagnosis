@@ -319,6 +319,10 @@ static int nl_msg_parse(char *buf, int status)
                 continue;
             }
         }
+	if(pkg->idiag_state != TCP_ESTABLISHED){
+            nlh = NLMSG_NEXT(nlh, status);
+            continue;
+	}
 
         init_buffer();
         printf("------(%s  %s:%u  %s:%u  %s  ino:%u)",\

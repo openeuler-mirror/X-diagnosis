@@ -17,12 +17,10 @@ struct {
 } stack_map SEC(".maps");
 
 struct {
-    __uint(type, BPF_MAP_TYPE_HASH);
-    __type(key, struct key_xd_tcpreststack);
+    __uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
+    __type(key, u32);
     __type(value, u32);
-    /* balance between memory usage and monitoring scope */
-    __uint(max_entries, 4096);
-} stackinfo_map SEC(".maps");
+} stackinfo_event SEC(".maps");
 
 static __inline int get_reset_stack(struct pt_regs *ctx)
 {
@@ -32,7 +30,7 @@ static __inline int get_reset_stack(struct pt_regs *ctx)
     struct tcp_sock *tcp_sk;
     struct ipv6_pinfo *pinet6;
     struct inet_connection_sock *icsk;
-    struct key_xd_tcpreststack key = {0};
+    struct event_tcpreststack event = {0};
 
     sk = (struct sock *)PT_REGS_PARM1(ctx);
     if(!sk){
@@ -42,41 +40,41 @@ static __inline int get_reset_stack(struct pt_regs *ctx)
     icsk = (struct inet_connection_sock *)sk;
     pinet6 = BPF_PROBE_VAL(tcp_sk->inet_conn.icsk_inet.pinet6);
 
-    key.pid = bpf_get_current_pid_tgid() >> 32;
-    bpf_get_current_comm(&key.comm, sizeof(key.comm));
-    key.kstack_id = bpf_get_stackid(ctx, &stack_map, KERN_STACKID_FLAGS);
-    if ((int)key.kstack_id < 0){
+    event.pid = bpf_get_current_pid_tgid() >> 32;
+    bpf_get_current_comm(&event.comm, sizeof(event.comm));
+    event.kstack_id = bpf_get_stackid(ctx, &stack_map, KERN_STACKID_FLAGS);
+    if ((int)event.kstack_id < 0){
         bpf_printk("tcp_reset_stack: bpf_get_stackid failed\n");
         return -1;
     }
 
-    key.sport = BPF_PROBE_VAL(tcp_sk->inet_conn.icsk_inet.inet_sport);
-    key.dport = BPF_PROBE_VAL(tcp_sk->inet_conn.icsk_inet.inet_dport);
-    key.protocol = 0;
-    key.family = BPF_PROBE_VAL(sk->sk_family);
+    event.sport = BPF_PROBE_VAL(tcp_sk->inet_conn.icsk_inet.inet_sport);
+    event.dport = BPF_PROBE_VAL(tcp_sk->inet_conn.icsk_inet.inet_dport);
+    event.protocol = 0;
+    event.family = BPF_PROBE_VAL(sk->sk_family);
 
     /* ipv4 */
     if(BPF_PROBE_VAL(sk->sk_family) == AF_INET){
-        key.saddr[0] = BPF_PROBE_VAL(tcp_sk->inet_conn.icsk_inet.inet_saddr);
-        key.daddr[0] = BPF_PROBE_VAL(tcp_sk->inet_conn.icsk_inet.inet_daddr);
+        event.saddr[0] = BPF_PROBE_VAL(tcp_sk->inet_conn.icsk_inet.inet_saddr);
+        event.daddr[0] = BPF_PROBE_VAL(tcp_sk->inet_conn.icsk_inet.inet_daddr);
     /* ipv6 */
     } else if (BPF_PROBE_VAL(sk->sk_family) == AF_INET6){
         if(!pinet6){
             bpf_printk("icsk_inet->pinet6 is NULL\n");
             return 0;
         }
-        key.saddr[0] = BPF_PROBE_VAL(pinet6->saddr.s6_addr32[0]);
-        key.saddr[1] = BPF_PROBE_VAL(pinet6->saddr.s6_addr32[1]);
-        key.saddr[2] = BPF_PROBE_VAL(pinet6->saddr.s6_addr32[2]);
-        key.saddr[3] = BPF_PROBE_VAL(pinet6->saddr.s6_addr32[3]);
+        event.saddr[0] = BPF_PROBE_VAL(pinet6->saddr.s6_addr32[0]);
+        event.saddr[1] = BPF_PROBE_VAL(pinet6->saddr.s6_addr32[1]);
+        event.saddr[2] = BPF_PROBE_VAL(pinet6->saddr.s6_addr32[2]);
+        event.saddr[3] = BPF_PROBE_VAL(pinet6->saddr.s6_addr32[3]);
 
         struct in6_addr       *daddr;
         daddr = (struct in6_addr *)BPF_PROBE_VAL(pinet6->daddr_cache);
         if(daddr){
-            key.daddr[0] = BPF_PROBE_VAL(daddr->s6_addr32[0]);
-            key.daddr[1] = BPF_PROBE_VAL(daddr->s6_addr32[1]);
-            key.daddr[2] = BPF_PROBE_VAL(daddr->s6_addr32[2]);
-            key.daddr[3] = BPF_PROBE_VAL(daddr->s6_addr32[3]);
+            event.daddr[0] = BPF_PROBE_VAL(daddr->s6_addr32[0]);
+            event.daddr[1] = BPF_PROBE_VAL(daddr->s6_addr32[1]);
+            event.daddr[2] = BPF_PROBE_VAL(daddr->s6_addr32[2]);
+            event.daddr[3] = BPF_PROBE_VAL(daddr->s6_addr32[3]);
         }
     } else {
         bpf_printk("BPF get_tcp_info family:%d incrrect\n",
@@ -84,12 +82,8 @@ static __inline int get_reset_stack(struct pt_regs *ctx)
         return -1;
     }
 
-    val = bpf_map_lookup_elem(&stackinfo_map, &key);
-    if (val)
-        (*val) ++;
-    else
-        bpf_map_update_elem(&stackinfo_map, &key, &one, BPF_NOEXIST);
-
+    bpf_perf_event_output(ctx, &stackinfo_event, BPF_F_CURRENT_CPU, \
+             &event, sizeof(struct event_tcpreststack));
     return 0;
 }
 

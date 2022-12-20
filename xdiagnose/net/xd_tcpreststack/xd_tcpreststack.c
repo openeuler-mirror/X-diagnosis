@@ -11,7 +11,9 @@
 #include <asm/types.h>
 #include <stdarg.h>
 #include <sys/resource.h>
-
+#include <sys/time.h>
+#include <time.h>
+#include <signal.h>
 
 /* for bpf*/
 #include <linux/bpf.h>
@@ -29,15 +31,13 @@ struct ksym {
         char *name;
 };
 
+static unsigned int running = 1;
 static struct ksym syms[MAX_SYMS];
 static int sym_cnt;
 static int stack_mapfd;
-static int stack_infofd;
 /* For Input Parameter */
 /* depth of kernel stack, default 3 */
 static int stack_depth = 3;
-/* interval time of detection, default 200 */
-static int interval_time = 200;
 
 static const struct option long_opts[] = {
     { "help", 0, 0, 'h' },
@@ -130,76 +130,66 @@ static void print_kern_stack(unsigned long *stack)
     printf("  ------ KERNEL STACK END ------ \n\n");
 }
 
-static void print_info(struct key_xd_tcpreststack *key)
+static void print_info(struct event_tcpreststack *event)
 {
     char src_ip[64];
     char dst_ip[64];
     memset(src_ip, 0, sizeof(src_ip));
     memset(dst_ip, 0, sizeof(dst_ip));
-    inet_ntop(key->family, key->saddr, src_ip, sizeof(src_ip));
-    inet_ntop(key->family, key->daddr, dst_ip, sizeof(dst_ip));
+    inet_ntop(event->family, event->saddr, src_ip, sizeof(src_ip));
+    inet_ntop(event->family, event->daddr, dst_ip, sizeof(dst_ip));
     printf(" ============== pid: %d, comm:%s ============\n",
-            key->pid, key->comm);
+            event->pid, event->comm);
     printf(" -- %s:%u    %s:%u --\n", 
-            src_ip, ntohs(key->sport),
-            dst_ip, ntohs(key->dport));
+            src_ip, ntohs(event->sport),
+            dst_ip, ntohs(event->dport));
 }
 
-static int print_xd_tcpreststacks(void)
+static void print_timeinfo(void)
+{
+    time_t now;
+    time(&now);
+    printf("%s", ctime(&now));
+}
+
+static int event_handler(void *ctx, int cpu, void *data, unsigned int data_sz)
 {
     int ret;
-    int running = 1;
     unsigned int kstack_id = 0;
-    unsigned int next_id = 0;
-    struct key_xd_tcpreststack key, next_key;
+    struct event_tcpreststack *event;
     unsigned long stack[XDIAG_KERN_STACK_DEPTH];
-    
-    if (load_kallsyms()) {
-        printf("failed to process /proc/kallsyms\n");
+
+    event = (struct event_tcpreststack *)data;
+    kstack_id = event->kstack_id;
+    ret = bpf_map_lookup_elem(stack_mapfd, &kstack_id, &stack);
+    if(ret != 0){
+        printf("stack_mapfd: bpf_map_lookup_elem failed\n");
         return -1;
     }
+    print_timeinfo();
+    print_info(event);
+    print_kern_stack(stack);
 
-    while(running){
-        memset(&key, 0x0, sizeof(struct key_xd_tcpreststack));
-        memset(&next_key, 0x0, sizeof(struct key_xd_tcpreststack));
-        memset(stack, 0x0, sizeof(stack));
-        while(bpf_map_get_next_key(stack_infofd, &key, &next_key) == 0){
-            kstack_id = next_key.kstack_id;
-            ret = bpf_map_lookup_elem(stack_mapfd, &kstack_id, &stack);
-            if(ret != 0){
-                printf("stack_mapfd: bpf_map_lookup_elem failed\n");
-                continue;
-            }
-            print_info(&next_key);
-            print_kern_stack(stack);
-            bpf_map_delete_elem(stack_infofd, &next_key);
-            key = next_key;
-        }
-
-        kstack_id = 0;
-        while (bpf_map_get_next_key(stack_mapfd, &kstack_id, &next_id) == 0){
-            bpf_map_delete_elem(stack_mapfd, &next_id);
-            kstack_id = next_id;
-        }
-        usleep(interval_time * 1000);
-    }
-    
     return 0;
+}
+
+static void rst_sig_handler(int sig)
+{
+    running = 0;
 }
 
 int main(int argc, char **argv)
 {
     int ret = 0;
     int ch;
+    struct perf_buffer *pb = NULL;
+    struct perf_buffer_opts pb_opts = {};
     struct xd_tcpreststack_bpf *skel;
 
     while ((ch = getopt_long(argc, argv, "hd:t:", long_opts, NULL)) != -1) {
         switch (ch) {
         case 'd':
             stack_depth = atoi(optarg);
-            break;
-        case 't':
-            interval_time = atoi(optarg);
             break;
         case 'h':
             usage(argv[0]);
@@ -233,15 +223,33 @@ int main(int argc, char **argv)
         goto cleanup;
     }
 
-    stack_infofd = bpf_map__fd(skel->maps.stackinfo_map);
-    if (stack_infofd < 0) {
-        fprintf(stderr, "Failed to get BPF map fd\n");
+    pb_opts.sample_cb = event_handler;
+    pb = perf_buffer__new(bpf_map__fd(skel->maps.stackinfo_event), \
+            16, &pb_opts); /* 64Kb for each CPU*/
+    if (libbpf_get_error(pb)) {
+        fprintf(stderr, "Failed to create perf buffer\n");
         ret =  -1;
-        goto cleanup;
+        goto cleanup_fd;
     }
 
-    print_xd_tcpreststacks();
+    if (load_kallsyms()) {
+        printf("failed to process /proc/kallsyms\n");
+        ret =  -1;
+        goto cleanup_fd;
+    }
 
+    signal(SIGINT, rst_sig_handler);
+    signal(SIGTERM, rst_sig_handler);
+    while(running){
+        ret = perf_buffer__poll(pb, 100000); /* timeout 100ms*/
+        if(ret < 0 && ret != -EINTR){
+            fprintf(stderr, "Polling perf buffer error:%d\n", ret);
+            goto cleanup_fd;
+        }
+    }
+
+cleanup_fd:
+    close(stack_mapfd);
 cleanup:
     xd_tcpreststack_bpf__destroy(skel);
     return ret;
