@@ -28,7 +28,7 @@ static int map_fd;
 static unsigned int interval_time = 1;
 /* arp storm frequency threshold, default 100 times(per second) */
 static unsigned int filter_freq = 100;
-static unsigned int check_count = 1;
+static unsigned int check_count = 0xffffffff;
 static unsigned int running = 1;
 
 static const struct option long_opts[] = {
@@ -41,14 +41,28 @@ static const struct option long_opts[] = {
 
 static void usage(char *cmd)
 {
-    printf("Usage: xd_arpstormcheck [ OPTIONS ]\n"
+    printf("Usage: %s [ OPTIONS ]\n"
             "   -h,--help           this message\n"
             "   -i,--interval       The interval time of the probe/s\n"
             "   -c,--count          check count, default 1\n"
-            "   -f,--freq           filter freq, $$ times per second\n");
+            "   -f,--freq           filter freq, $$ times per second\n", cmd);
 }
 
-void xarp_check_handler(int sig)
+static void xarp_sig_handler(int sig)
+{
+    switch(sig){
+        case SIGALRM:
+            break;
+        case SIGTERM:
+        case SIGINT:
+            running = 0;
+            break;
+        default:
+            break;
+    }
+}
+
+static void xarp_check_show(void)
 {
     int ret;
     unsigned int value;
@@ -56,32 +70,32 @@ void xarp_check_handler(int sig)
 
     memset(&key, 0x0, sizeof(struct key_xarp));
     memset(&next_key, 0x0, sizeof(struct key_xarp));
-    if(sig == SIGALRM){
-        while(bpf_map_get_next_key(map_fd, &key, &next_key) == 0){
-            value = 0;
-            ret = bpf_map_lookup_elem(map_fd, &next_key, &value);
-            if(ret != 0){
-                printf("stack_mapfd: bpf_map_lookup_elem failed\n");
-                continue;
-            }
-
-            if(value > filter_freq){
-                char sip[64];
-                char tip[64];
-                memset(sip, 0, sizeof(sip));
-                memset(tip, 0, sizeof(tip));
-                inet_ntop(next_key.family, next_key.sip, sip, sizeof(sip));
-                inet_ntop(next_key.family, next_key.tip, tip, sizeof(tip));
-                printf("SIP:%s  TIP:%s    Freq:  %d times per SEC\n", sip, tip, value);
-            }
-            bpf_map_delete_elem(map_fd, &next_key);
-            key = next_key;
+    while(bpf_map_get_next_key(map_fd, &key, &next_key) == 0){
+        value = 0;
+        ret = bpf_map_lookup_elem(map_fd, &next_key, &value);
+        if(ret != 0){
+            printf("stack_mapfd: bpf_map_lookup_elem failed\n");
+            continue;
         }
+
+        if(value > filter_freq){
+            char sip[64];
+            char tip[64];
+            memset(sip, 0, sizeof(sip));
+            memset(tip, 0, sizeof(tip));
+            inet_ntop(next_key.family, next_key.sip, sip, sizeof(sip));
+            inet_ntop(next_key.family, next_key.tip, tip, sizeof(tip));
+            printf("SIP:%s  TIP:%s    Freq:  %d times per SEC\n", sip, tip, value);
+        }
+        bpf_map_delete_elem(map_fd, &next_key);
+        key = next_key;
     }
 
-    check_count--;
-    if(check_count == 0){
-        running = 0;
+    if(check_count != 0xffffffff){
+        check_count--;
+        if(check_count == 0){
+            running = 0;
+        }
     }
     return;
 }
@@ -96,7 +110,7 @@ static int xarp_check(void)
     itv_new.it_value.tv_usec = 0;
     itv_new.it_interval.tv_sec = interval_time;
     itv_new.it_interval.tv_usec = 0;
-    signal(SIGALRM, xarp_check_handler);
+    signal(SIGALRM, xarp_sig_handler);
 
     /* clean icmp pkg first */
     memset(&key, 0x0, sizeof(struct key_xarp));
@@ -108,7 +122,8 @@ static int xarp_check(void)
 
     setitimer(ITIMER_REAL, &itv_new, NULL);
     while(running){
-        usleep(100 * 1000);
+        pause();
+        xarp_check_show();
     } 
     
     return 0;
