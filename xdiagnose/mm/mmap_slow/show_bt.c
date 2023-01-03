@@ -534,7 +534,7 @@ static int dump_task(struct dump_mngr *mngr)
 		cost_ms = NS_TO_MS(ktime_to_ns(ktime_sub(ktime_get(), obj->start)));
 		if (cost_ms > ttms) {
 			if (count == 1) {
-				pr_info("[cpu %d] begin to dump %s \n",
+				pr_info("--------------- [cpu%02d] begin to dump %s ---------------\n",
 					smp_processor_id(), mngr->obj_name);
 				print_end_mark = 1;
 			}
@@ -555,7 +555,7 @@ static int dump_task(struct dump_mngr *mngr)
 	if (count) {
 		if (print_end_mark) {
 			pr_info("dump %d task%s\n", count, (count == 1 ? "" : "s"));
-			pr_info("[cpu %d]   end to dump %s \n\n",
+			pr_info("--------------- [cpu%02d]   end to dump %s ---------------\n\n",
 				smp_processor_id(), mngr->obj_name);
 		}
 	} else {
@@ -583,13 +583,13 @@ static int dump_tasks(void)
 			if (0 != strcmp(proc[i], p->comm))
 				continue;
 
-			pr_info("[cpu %d] begin to dump[%d][%d:%s:%d]\n",
+			pr_info("---------------- [cpu%02d] begin to dump[%d][%d:%s:%d] ----------------\n",
 					smp_processor_id(), n, p->tgid, p->comm, p->pid);
 			get_task_struct(p);
 			j = 1;
 			dump_each_thread(j, p, t, do_task_dumpstack);
 			put_task_struct(p);
-			pr_info("[cpu %d]  end  to dump[%d][%d:%s:%d] \n\n",
+			pr_info("---------------- [cpu%02d]  end  to dump[%d][%d:%s:%d] ----------------\n\n",
 					smp_processor_id(), n, p->tgid, p->comm, p->pid);
 			n++;
 		}
