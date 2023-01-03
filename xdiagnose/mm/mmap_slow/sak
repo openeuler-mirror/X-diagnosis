@@ -1,0 +1,108 @@
+#!/usr/bin/python
+# -*- coding: UTF-8 -*- 
+
+import argparse
+import math
+import os
+import sys
+import time
+import shlex
+import subprocess
+
+from signal import signal, SIGPIPE, SIG_DFL
+signal(SIGPIPE, SIG_DFL)
+
+PROC_BUDDYINFO = "buddyinfo"
+PROC_INTERRUPT = "interrupts"
+PROC_SOFTIRQS = "softirqs"
+CMD_BTT = "btt"
+CMD_MPSTAT = "mpstat"
+PROC_IRQ_CPU = "irqcpu"
+
+class RunCmd:
+	def __init__(self, act):
+		self.act = act
+
+	def run(self, cmd):
+		print(cmd)
+		if self.act == 1:
+			subprocess.Popen(shlex.split(cmd), shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+
+class BuddyInfo:
+	'''
+	/proc/buddyinfo show all free memory is divided into 11 block linked lists in the form of power of 2, 
+	corresponding to 1, 2, 4, 8, 16, 32, 64, 128, 256, 512 and 1024 page blocks respectively.
+	This tool convert the blocks counter to memory size (unit is K/M/G), add time stamp.
+	Such as below output (sak buddyinfo -u=K -o=1)
+										order      1      2      3      4      5      6      7      8      9      10   11
+						Node 0, zone    DMA32      3      1      2      1      4      3      4      6      4      5    611 
+	2021-10-14 10:16:18 Node 0, zone    DMA32      12     8      32     32     256    384    1024   3072   4096   10240 2502656 (total:   2521812 K)  
+												(3*1*4K)(1*2*4K) ...
+	'''
+	BUDDY_INFO_MAX_COL = 15
+	BUDDY_INFO_KEYWORD = ["Node", ", zone"]
+
+	def __init__(self, args):
+		self.ts, self.unit, self.count = args.time, args.unit, args.count
+		self.interval, self.org, self.dbg = args.interval, args.orig, args.debug
+
+	def display_time(self, show):
+		if show == 1:
+			print("%s" % time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())),
+
+	def display_unit(self, unit, size_kb, show):
+		if unit == "K":
+			print("%6d" % (size_kb)),
+		elif unit == "M":
+			print("%6.0f" % (size_kb / 1024)),
+		else:
+			print("%6.0f" % (size_kb / 1024 / 1024)),
+
+		if show == 1:
+			print("%s)" % unit)
+
+	def display_original(self, org, ts, info):
+		if org == 1:
+			prefix_len = 0
+			if ts == 1:
+				prefix_len = len("yyyy-mm-dd hh:mm:ss ")
+			print("%s%s" % (" " * prefix_len, info))
+
+	def get_buddy_info(self):
+		f = open('/proc/buddyinfo')
+		lines = f.readlines()
+		for line in lines:
+			line = line.strip("\n")
+			line_list = line.split()
+			if len(line_list) == self.BUDDY_INFO_MAX_COL \
+			and all(i in line for i in self.BUDDY_INFO_KEYWORD):
+				self.display_original(self.org, self.ts, line)
+
+				self.display_time(self.ts)
+				print("%s %s %s   %6s" % (line_list[0], line_list[1], line_list[2], line_list[3])),
+
+				zone_total = 0
+				for idx in range(4, self.BUDDY_INFO_MAX_COL):
+					block_cnt = int(line_list[idx])
+					pages_cnt = math.pow(2, (idx - 4))
+					order_size = block_cnt * pages_cnt * 4
+					zone_total = zone_total + order_size
+
+					self.display_unit(self.unit, order_size, 0)
+					if self.dbg == 1:
+						print("(%5d*%d*4K)" % (block_cnt, pages_cnt)),
+				print("(total:"),
+				self.display_unit(self.unit, zone_total, 1)
+
+	def run(self):
+		if self.count == 0:
+			while True:
+				self.get_buddy_info()
+				time.sleep(self.interval)
+		else:
+			for i in range(self.count):
+				self.get_buddy_info()
+				if i == self.count - 1:
+					break
+				time.sleep(self.interval)
