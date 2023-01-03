@@ -10,7 +10,8 @@
 
 #endif /* LINUX_VERSION_CODE */
 
-
+#elif LINUX_VERSION_CODE == KERNEL_VERSION(3, 10, 0)
+extern struct workqueue_struct *system_highpri_wq;
 struct task_struct *get_rwsem_owner(struct rw_semaphore *rwsem)
 {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 18, 0)
@@ -20,6 +21,8 @@ struct task_struct *get_rwsem_owner(struct rw_semaphore *rwsem)
 	} else {
 		return NULL;
 	}
+#elif LINUX_VERSION_CODE == KERNEL_VERSION(3, 10, 0)
+		return NULL;
 #endif
 }
 
@@ -27,6 +30,8 @@ int has_rwsem_owner(void)
 {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 18, 0)
 		return 1;
+#elif LINUX_VERSION_CODE == KERNEL_VERSION(3, 10, 0)
+		return 0;
 #endif
 }
 
@@ -38,13 +43,15 @@ int is_symbol_kprobe_support(const char *name)
 	 || (0 == strcmp(name, DOWN_WRITE_KILLABLE_SYMBOL_NAME))) {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 18, 0)
 		return 1;
+#elif LINUX_VERSION_CODE == KERNEL_VERSION(3, 10, 0)
+		return 0;
 #endif
 	} else {
 		return 1;
 	}
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 18, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 18, 0)  || LINUX_VERSION_CODE == KERNEL_VERSION(3, 10, 0)
 #define DUMP_QUEUE_DELAYED_WORK(dwork, delay)	queue_delayed_work(system_highpri_wq, (dwork), (delay))
 #define _UID_VALUE(cred)	(__kuid_val((cred)->uid))
 #define PRINT_ADDRESS(seq, addr)	printk(" {%d}    %pB\n", (seq), (addr))
