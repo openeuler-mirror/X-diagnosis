@@ -114,6 +114,11 @@ static struct dump_mngr mmfault_caller = {.obj_name = "mm fault", .is_dump = DUM
 static atomic_t mod_exiting = ATOMIC_INIT(0);
 
 #define LOG_PER_INFO "[infos] "
+/*
+ * down_read/down_read_killable
+ * 1. task 等待读锁的时间: [down_read.entry_handler - down_read.handler] 此场景只支持打印等待时长。
+ * 2. task 持有读锁的时间: [up_read - down_read.handler] ，当持有锁时间超过阈值，支持打内核栈。
+ */
 static int down_read_acquire(struct kretprobe_instance *ri, struct pt_regs *regs);
 static int down_read_acquired(struct kretprobe_instance *ri, struct pt_regs *regs);
 static struct kretprobe kretprobe_down_read = {
@@ -185,6 +190,11 @@ static struct kprobe kp_do_exit = {
 	.pre_handler = enter_do_exit,
 };
 
+/*
+ * 用来观察 do_page_fault 卡在什么流程。常见以下2种场景：
+ * 1. 等读锁
+ * 2. 持有锁后，内存申请走slow path流程
+ */
 static int enter_mmfault(struct kretprobe_instance *ri, struct pt_regs *regs);
 static int return_mmfault(struct kretprobe_instance *ri, struct pt_regs *regs);
 static struct kretprobe kretprobe_mmfault = {
@@ -194,7 +204,9 @@ static struct kretprobe kretprobe_mmfault = {
 	.data_size = sizeof(struct my_vma),
 };
 
-
+/*
+ * 因为 mmap_sem 是进程共享，所以rw_semaphore个数与被监控的进程个数一致
+ */
 static int find_rwsem(struct rw_semaphore *sem)
 {
 	int i;
@@ -210,7 +222,9 @@ static int find_rwsem(struct rw_semaphore *sem)
 	return -1;
 }
 
-
+/*
+ * 周期性激活 workqueue 用来 dump 正在被监控的线程
+ */
 static void fire_dmp_dw(struct task_struct *caller, const char *kp_name)
 {
 	if (!delayed_work_pending(&dumptask_dw)) {
@@ -824,7 +838,14 @@ static void clear_dump_objs(struct task_struct *cur, const int by_rwsem)
 	clear_dump_obj(&mmfault_caller, cur, tsk, sem);
 }
 
-
+/*
+ * task A 是被监控进程
+ * 场景1: “其它” task 持有 task A 的 rwsem 锁，“其它” task 未释放锁就退出（实际属于bug场景或者是测试场景）。
+ * 当“其它” task 退出时，需要清除 objs 里的“其它” task 信息。
+ *
+ * 场景2: “其它” task 持有 task A 的 rwsem 锁，task A 退出。
+ * task A 退出时，需要清理 objs 里所有涉及 task A 的 rwsem 锁的信息。
+ */
 static int enter_do_exit(struct kprobe *p, struct pt_regs *regs)
 {
 	int i;
