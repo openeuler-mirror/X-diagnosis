@@ -457,3 +457,33 @@ class IrqSmpAffinity:
 				if i == self.count - 1:
 					break
 				time.sleep(self.interval)
+
+
+def buddyinfo_oneshot(args):
+	BuddyInfo(args).run()
+
+def interrupts_exec(args):
+	IrqInfo(args).run()
+
+def softirqs_exec(args):
+	IrqInfo(args).run()
+
+def btt_oneshot(args):
+	Btt(args).run()
+
+def mpstat_oneshot(args):
+	MpStat(args).run()
+
+def irq_cpu_affinity_exec(args):
+	IrqSmpAffinity(args).run()
+
+
+FUNC = {
+	PROC_BUDDYINFO : buddyinfo_oneshot,
+	PROC_INTERRUPT : interrupts_exec,
+	PROC_SOFTIRQS  : softirqs_exec,
+	CMD_BTT        : btt_oneshot,
+	CMD_MPSTAT     : mpstat_oneshot,
+	PROC_IRQ_CPU   : irq_cpu_affinity_exec,
+}
+
