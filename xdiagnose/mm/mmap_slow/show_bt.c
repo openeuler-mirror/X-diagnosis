@@ -46,7 +46,9 @@ static unsigned int dims = 1000;
 module_param(dims, uint, 0400);
 static struct delayed_work dumptask_dw;
 
+/* tolerate time ms */
 static unsigned int ttms = 1000;
+module_param(ttms, uint, 0400);
 
 static unsigned int sop = 0;
 
