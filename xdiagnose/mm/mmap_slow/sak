@@ -423,3 +423,37 @@ class IrqSmpAffinity:
 
 		cpu_list = self.get_irq_cpu_list(file)
 		print("[irq: {0:3}]: {1}".format(irq, cpu_list))
+
+	def show_include(self):
+		dirs = os.listdir(self.PROC_IRQ_PATH)
+		for irq in dirs:
+			if irq in self.include:
+				self.show_irq_affinity(irq)
+	
+	def show_all_but_exclude(self):
+		dirs = os.listdir(self.PROC_IRQ_PATH)
+		for irq in dirs:
+			if irq in self.exclude:
+				continue
+			self.show_irq_affinity(irq)
+
+	def show_irqs_cpu_list(self):
+		timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+		print("{0}".format(timestamp))
+		if len(self.include):
+			self.show_include()
+		else:
+			self.show_all_but_exclude()
+		print("\n")
+
+	def run(self):
+		if self.count == 0:
+			while True:
+				self.show_irqs_cpu_list()
+				time.sleep(self.interval)
+		else:
+			for i in range(self.count):
+				self.show_irqs_cpu_list()
+				if i == self.count - 1:
+					break
+				time.sleep(self.interval)
