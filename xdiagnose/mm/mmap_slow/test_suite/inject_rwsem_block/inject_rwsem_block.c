@@ -15,18 +15,23 @@
 #define LOG_PFX		"======== [mmap_slow_inject]"
 
 static unsigned int lr = 0;
+module_param(lr, uint, 0400);
 
 static unsigned int ns = 10;
+module_param(ns, uint, 0400);
 
 #define DR		(0x1)
 #define DR_TRY	(DR | 0x2)
 static unsigned int ro = 0;
 
 static unsigned int urm = 1;
+module_param(urm, uint, 0400);
 
 static unsigned long dms = 1000;
+module_param(dms, ulong, 0400);
 
 static char *proc = "daemon";
+module_param(proc, charp, 0400);
 
 static void delay_rwsem_unlock(struct work_struct *work);
 static DECLARE_DELAYED_WORK(rwsem_unlock_dw, delay_rwsem_unlock);
