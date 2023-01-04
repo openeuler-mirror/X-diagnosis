@@ -1,20 +1,5 @@
 /*
-	echo 'p:enter_mm_populate __mm_populate start=%di len=%si' > /sys/kernel/debug/tracing/kprobe_events
-	echo 'r:leave_mm_populate __mm_populate $retval' >> /sys/kernel/debug/tracing/kprobe_events
-	echo 'p:enter_get_user_pages __get_user_pages start=%dx nr_pages=%cx' >> /sys/kernel/debug/tracing/kprobe_events
-	echo 'r:leave_get_user_pages __get_user_pages $retval' >> /sys/kernel/debug/tracing/kprobe_events
-	echo 'p:enter handle_mm_fault start=%si fault_flags=%dx' >> /sys/kernel/debug/tracing/kprobe_events
-	echo 'r:leave handle_mm_fault $retval' >> /sys/kernel/debug/tracing/kprobe_events
-	echo 'p:enter __do_fault address=%si pgoff=%dx flags=%cx' >> /sys/kernel/debug/tracing/kprobe_events
-	echo 'r:leave __do_fault $retval' >> /sys/kernel/debug/tracing/kprobe_events
-	echo 'p:shmem_fault shmem_fault' >> /sys/kernel/debug/tracing/kprobe_events
-	echo 'p:shmem_getpage_gfp shmem_getpage_gfp' >> /sys/kernel/debug/tracing/kprobe_events
-	echo 'p:shmem_alloc_page shmem_alloc_page' >> /sys/kernel/debug/tracing/kprobe_events
-
-	echo '(comm=="a.out")' > /sys/kernel/debug/tracing/events/kprobes/filter
-	echo 1 > /sys/kernel/debug/tracing/events/kprobes/enable
-	echo 1 > /sys/kernel/debug/tracing/tracing_on
-	cat /sys/kernel/debug/tracing/trace_pipe
+	mm_populate test case
 */
 #define _GNU_SOURCE
 #include <sys/mman.h>
