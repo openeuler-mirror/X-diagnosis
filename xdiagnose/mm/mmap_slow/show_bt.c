@@ -273,13 +273,13 @@ static void show_dump_obj(struct dump_mngr *mngr)
 	struct dump_object *obj;
 
 	if (!mngr->is_dump) {
-		kinfo("[%s] %s off. scope: 0x%x\n",
+		kinfo("[%s] %s dump is off. dump_scope: 0x%x\n",
 				__FUNCTION__, mngr->obj_name, dump_scope);
 		return;
 	}
 
 	obj_cnt = mngr->obj_cnt;
-	kinfo("[%s] %s %d objs (0x%lx)\n",
+	kinfo("[%s] %s has %d objs (0x%lx)\n",
 			__FUNCTION__, mngr->obj_name, obj_cnt, (unsigned long)mngr->obj);
 
 	for (i = 0; i < obj_cnt; i++) {
