@@ -24,6 +24,9 @@
 #define DUMP_MM_FAULT		(0x4)
 #define DUMP_ALL (DUMP_WSEM_HOLDER | DUMP_RSEM_HOLDER | DUMP_MM_FAULT)
 
+#define DBG_LV0			(0x40000000)	/* default */
+#define DBG_LV1			(0x1)	/* 全局控制数据 */
+
 static char *proc[MAX_MONITOR_NUM];
 static int proc_num = 0;
 module_param_array(proc, charp, &proc_num, 0400);
@@ -114,20 +117,20 @@ static struct dump_mngr mmfault_caller = {.obj_name = "mm fault", .is_dump = DUM
 static atomic_t mod_exiting = ATOMIC_INIT(0);
 
 #define kinfos(_level, fmt, ...)	({				\
-	if (debug) {							\
+	if ((_level) & debug) {							\
 		pr_info(LOG_PFX pr_fmt(fmt), ##__VA_ARGS__);}})
 
 #define kwarns(_level, fmt, ...) ({					\
-	if (debug) {							\
+	if ((_level) & debug) {							\
 		pr_warning(LOG_PFX pr_fmt(fmt), ##__VA_ARGS__);}})
 
 #define kerrs(_level, fmt, ...) ({					\
-	if (debug) {							\
+	if ((_level) & debug) {							\
 		pr_err(LOG_PFX pr_fmt(fmt), ##__VA_ARGS__);}})
 
-#define kinfo(fmt, ...) kinfos(pr_fmt(fmt), ##__VA_ARGS__)
-#define kwarn(fmt, ...) kwarns(pr_fmt(fmt), ##__VA_ARGS__)
-#define kerr(fmt, ...)   kerrs(pr_fmt(fmt), ##__VA_ARGS__)
+#define kinfo(_level, fmt, ...) kinfos(_level, pr_fmt(fmt), ##__VA_ARGS__)
+#define kwarn(_level, fmt, ...) kwarns(_level, pr_fmt(fmt), ##__VA_ARGS__)
+#define kerr(_level, fmt, ...)   kerrs(_level, pr_fmt(fmt), ##__VA_ARGS__)
 
 /*
  * down_read/down_read_killable
@@ -245,10 +248,10 @@ static void fire_dmp_dw(struct task_struct *caller, const char *kp_name)
 	if (!delayed_work_pending(&dumptask_dw)) {
 		DUMP_QUEUE_DELAYED_WORK(&dumptask_dw, msecs_to_jiffies(dims));
 
-		kinfo("[%s][%d:%s:%d] fire dwork\n",
+		kinfo(DBG_LV0, "[%s][%d:%s:%d] fire dwork\n",
 			kp_name, caller->tgid, caller->comm, caller->pid);
 	} else {
-		kinfo("[%s][%d:%s:%d] dwork is pending\n",
+		kinfo(DBG_LV0, "[%s][%d:%s:%d] dwork is pending\n",
 			kp_name, caller->tgid, caller->comm, caller->pid);
 	}
 }
@@ -267,10 +270,10 @@ static void dump_rwsem_owner(void)
 
 		owner = get_rwsem_owner(MON_TASK_SEM(i));
 		if (owner)
-			kwarn("monitor[%d] tgid: %d owner=>[%d:%s:%d]\n",
+			kwarn(DBG_LV0, "monitor[%d] tgid: %d owner=>[%d:%s:%d]\n",
 				i, MON_TASK_TGID(i), owner->tgid, owner->comm, owner->pid);
 		else
-			kwarn("monitor[%d] tgid: %d owner=>reader\n", i, MON_TASK_TGID(i));
+			kwarn(DBG_LV0, "monitor[%d] tgid: %d owner=>reader\n", i, MON_TASK_TGID(i));
 		spin_unlock(MON_TASK_LOCK(i));
 	}
 }
@@ -282,13 +285,13 @@ static void show_dump_obj(struct dump_mngr *mngr)
 	struct dump_object *obj;
 
 	if (!mngr->is_dump) {
-		kinfo("[%s] %s dump is off. dump_scope: 0x%x\n",
+		kinfo(DBG_LV0, "[%s] %s dump is off. dump_scope: 0x%x\n",
 				__FUNCTION__, mngr->obj_name, dump_scope);
 		return;
 	}
 
 	obj_cnt = mngr->obj_cnt;
-	kinfo("[%s] %s has %d objs (0x%lx)\n",
+	kinfo(DBG_LV0, "[%s] %s has %d objs (0x%lx)\n",
 			__FUNCTION__, mngr->obj_name, obj_cnt, (unsigned long)mngr->obj);
 
 	for (i = 0; i < obj_cnt; i++) {
@@ -298,11 +301,11 @@ static void show_dump_obj(struct dump_mngr *mngr)
 		spin_lock(&obj->lock);
 		o = obj->caller;
 		if (o) {
-			kinfo("[%s] obj[%d][%d:%s:%d] tsk_sem: 0x%lx\n",
+			kinfo(DBG_LV0, "[%s] obj[%d][%d:%s:%d] tsk_sem: 0x%lx\n",
 				__FUNCTION__, i, o->tgid, o->comm, o->pid,
 				(unsigned long)obj->tsk_sem);
 		} else {
-			kinfo("[%s] obj[%d] caller: 0x%lx, tsk_sem: 0x%lx\n",
+			kinfo(DBG_LV0, "[%s] obj[%d] caller: 0x%lx, tsk_sem: 0x%lx\n",
 				__FUNCTION__, i,
 				(unsigned long)obj->caller, (unsigned long)obj->tsk_sem);
 		}
@@ -381,7 +384,7 @@ static int down_rwsem_done(struct dump_mngr *mngr,
 	/* add caller to dump objects */
 	i = get_dump_obj(mngr, NULL, caller);
 	if (-1 == i) {
-		kwarn("[%s][%d:%s:%d] exceed limit(%d) not be dump\n",
+		kwarn(DBG_LV0, "[%s][%d:%s:%d] exceed limit(%d) not be dump\n",
 			obj_name, caller->tgid, caller->comm, caller->pid,
 			mngr->obj_cnt);
 		return 0;
@@ -406,7 +409,7 @@ static void down_rwsem_acquired(struct kretprobe_instance *ri, struct dump_mngr 
 	wait_rwsem_ms = NS_TO_MS(ktime_to_ns(ktime_sub(ktime_get(), data->down_time)));
 	/* 长时间等锁的task（受害者） */
 	if (wait_rwsem_ms > ttms) {
-		kwarn("[%d:%s:%d] wait on %s for %u ms\n",
+		kwarn(DBG_LV0, "[%d:%s:%d] wait on %s for %u ms\n",
 			current->tgid, current->comm, current->pid,
 			kp_name, wait_rwsem_ms);
 	}
@@ -456,7 +459,7 @@ static int down_rwsem_trylock_acquired(struct kretprobe_instance *ri,
 	if (retval == 1) {
 		down_rwsem_done(mngr, data->sem, current, kp_name);
 	} else {
-		kinfo("[%s] contention [%d:%s:%d] retval: %lu\n",
+		kinfo(DBG_LV0, "[%s] contention [%d:%s:%d] retval: %lu\n",
 				kp_name, current->tgid, current->comm, current->pid, retval);
 	}
 	return 0;
@@ -494,7 +497,7 @@ static int down_rwsem_acquired_release(struct kprobe *p, struct pt_regs *regs, s
 	/* find current task */
 	i = get_dump_obj(mngr, task, task);
 	if (-1 == i) {
-		kwarn("[%s][%d:%s:%d] not found in %s\n", symbol_name,
+		kwarn(DBG_LV0, "[%s][%d:%s:%d] not found in %s\n", symbol_name,
 			task->tgid, task->comm, task->pid, mngr->obj_name);
 		return 0;
 	}
@@ -502,7 +505,7 @@ static int down_rwsem_acquired_release(struct kprobe *p, struct pt_regs *regs, s
 	obj = mngr->obj + i;
 	hold_ms = NS_TO_MS(ktime_to_ns(ktime_sub(ktime_get(), obj->start)));
 	if (hold_ms > ttms) {
-		kwarn(" warning! [%d:%s:%d] finally %s cost %u ms\n",
+		kwarn(DBG_LV0, " warning! [%d:%s:%d] finally %s cost %u ms\n",
 				task->tgid, task->comm, task->pid, mngr->obj_name, hold_ms);
 	}
 
@@ -537,7 +540,7 @@ static void do_task_dumpstack(struct task_struct *task, const int seq)
 	if (_lock_trace(task)) {
 		unsigned int i;
 
-		kwarn(" {%d} Call trace:\n", seq);
+		kwarn(DBG_LV0, " {%d} Call trace:\n", seq);
 		save_stack_trace_tsk(task, &trace);
 
 		for (i = 0; i < trace.nr_entries; i++) {
@@ -546,7 +549,7 @@ static void do_task_dumpstack(struct task_struct *task, const int seq)
 
 		_unlock_trace(task);
 	} else {
-		kwarn(" {%d} [cpu%02d] mutex_trylock failed for dump [%d:%s:%d]\n",
+		kwarn(DBG_LV0, " {%d} [cpu%02d] mutex_trylock failed for dump [%d:%s:%d]\n",
 			seq, smp_processor_id(), task->tgid, task->comm, task->pid);
 	}
 	return;
@@ -582,12 +585,12 @@ static int dump_task(struct dump_mngr *mngr)
 		cost_ms = NS_TO_MS(ktime_to_ns(ktime_sub(ktime_get(), obj->start)));
 		if (cost_ms > ttms) {
 			if (count == 1) {
-				kinfo("--------------- [cpu%02d] begin to dump %s ---------------\n",
+				kinfo(DBG_LV0, "--------------- [cpu%02d] begin to dump %s ---------------\n",
 					smp_processor_id(), mngr->obj_name);
 				print_end_mark = 1;
 			}
 
-			kwarn(" {%d} warning! [%d:%s:%d] %s cost %u ms",
+			kwarn(DBG_LV0, " {%d} warning! [%d:%s:%d] %s cost %u ms",
 				count, task->tgid, task->comm, task->pid, mngr->obj_name, cost_ms);
 			
 			if (dc)
@@ -602,12 +605,12 @@ static int dump_task(struct dump_mngr *mngr)
 
 	if (count) {
 		if (print_end_mark) {
-			kinfo("dump %d task%s\n", count, (count == 1 ? "" : "s"));
-			kinfo("--------------- [cpu%02d]   end to dump %s ---------------\n\n",
+			kinfo(DBG_LV0, "dump %d task%s\n", count, (count == 1 ? "" : "s"));
+			kinfo(DBG_LV0, "--------------- [cpu%02d]   end to dump %s ---------------\n\n",
 				smp_processor_id(), mngr->obj_name);
 		}
 	} else {
-		kinfo("[%s] %11s no task dumped in dwork\n",
+		kinfo(DBG_LV0, "[%s] %11s no task dumped in dwork\n",
 			__FUNCTION__, mngr->obj_name);
 	}
 out:
@@ -631,13 +634,13 @@ static int dump_tasks(void)
 			if (0 != strcmp(proc[i], p->comm))
 				continue;
 
-			kinfo("---------------- [cpu%02d] begin to dump[%d][%d:%s:%d] ----------------\n",
+			kinfo(DBG_LV0, "---------------- [cpu%02d] begin to dump[%d][%d:%s:%d] ----------------\n",
 					smp_processor_id(), n, p->tgid, p->comm, p->pid);
 			get_task_struct(p);
 			j = 1;
 			dump_each_thread(j, p, t, do_task_dumpstack);
 			put_task_struct(p);
-			kinfo("---------------- [cpu%02d]  end  to dump[%d][%d:%s:%d] ----------------\n\n",
+			kinfo(DBG_LV0, "---------------- [cpu%02d]  end  to dump[%d][%d:%s:%d] ----------------\n\n",
 					smp_processor_id(), n, p->tgid, p->comm, p->pid);
 			n++;
 		}
@@ -678,7 +681,7 @@ static void add_task_to(struct dump_mngr *mngr,
 	/* add caller to dump objects */
 	i = get_dump_obj(mngr, NULL, caller);
 	if (-1 == i) {
-		kwarn("[%s][%d:%s:%d] exceed limit(%d) not be dump\n",
+		kwarn(DBG_LV0, "[%s][%d:%s:%d] exceed limit(%d) not be dump\n",
 			mngr->obj_name, caller->tgid, caller->comm, caller->pid,
 			mngr->obj_cnt);
 		return;
@@ -705,7 +708,7 @@ static int rmv_task_from(struct dump_mngr *mngr,
 
 	i = get_dump_obj(mngr, task, task);
 	if (-1 == i) {
-		kwarn("[%s][%d:%s:%d] not found in %s\n", kp_name,
+		kwarn(DBG_LV0, "[%s][%d:%s:%d] not found in %s\n", kp_name,
 			task->tgid, task->comm, task->pid, mngr->obj_name);
 		return 0;
 	}
@@ -713,7 +716,7 @@ static int rmv_task_from(struct dump_mngr *mngr,
 	obj = mngr->obj + i;
 	cost_ms = NS_TO_MS(ktime_to_ns(ktime_sub(ktime_get(), obj->start)));
 	if (cost_ms > ttms) {
-		kwarn(" warning! [%d:%s:%d] finally %s cost %u ms\n",
+		kwarn(DBG_LV0, " warning! [%d:%s:%d] finally %s cost %u ms\n",
 			task->tgid, task->comm, task->pid, mngr->obj_name, cost_ms);
 		ret = 1;
 	}
@@ -780,7 +783,7 @@ static void show_file_mapping(struct kretprobe_instance *ri, struct task_struct 
 				name = d->d_iname;
 			}
 		}
-		kwarn(" warning! [%d:%s:%d] finally %s [%lx-%lx:%lx:0x%x:%s]\n",
+		kwarn(DBG_LV0, " warning! [%d:%s:%d] finally %s [%lx-%lx:%lx:0x%x:%s]\n",
 				task->tgid, task->comm, task->pid, mmfault_caller.obj_name,
 				vm_start, vm_end, data->address, data->flags, name);
 	}
@@ -819,13 +822,13 @@ static void clear_dump_obj(struct dump_mngr *mngr,
 		spin_lock(&obj->lock);
 		if (tsk && tsk == obj->caller) {
 			clear = 1;
-			kinfo("[%s by tsk] %s obj[%d][%d:%s:%d] tsk_sem: 0x%lx\n",
+			kinfo(DBG_LV0, "[%s by tsk] %s obj[%d][%d:%s:%d] tsk_sem: 0x%lx\n",
 				__FUNCTION__, mngr->obj_name, i, tsk->tgid, tsk->comm, tsk->pid,
 				(unsigned long)obj->tsk_sem);
 		}
 		if (!clear && (sem && sem == obj->tsk_sem)) {
 			clear = 1;
-			kinfo("[%s by sem] %s obj[%d][%d:%s:%d] tsk_sem: 0x%lx\n",
+			kinfo(DBG_LV0, "[%s by sem] %s obj[%d][%d:%s:%d] tsk_sem: 0x%lx\n",
 				__FUNCTION__, mngr->obj_name, i, cur->tgid, cur->comm, cur->pid,
 				(unsigned long)sem);
 		}
@@ -875,7 +878,7 @@ static int enter_do_exit(struct kprobe *p, struct pt_regs *regs)
 	if (-1 != i) {
 		if (current->pid == current->tgid) {
 			main_exit = 1;
-			kinfo("[do_exit][%d:%s:%d] main exit(%ld)\n",
+			kinfo(DBG_LV0, "[do_exit][%d:%s:%d] main exit(%ld)\n",
 					current->tgid, current->comm, current->pid, exit_code);
 
 			atomic_dec(MON_NUM_OF_FOUND());
@@ -887,7 +890,7 @@ static int enter_do_exit(struct kprobe *p, struct pt_regs *regs)
 
 			clear_dump_objs(current, 1);
 		} else {
-			kinfo("[do_exit][%d:%s:%d] child exit(%ld)\n",
+			kinfo(DBG_LV0, "[do_exit][%d:%s:%d] child exit(%ld)\n",
 					current->tgid, current->comm, current->pid, exit_code);
 		}
 	}
@@ -903,61 +906,61 @@ static int enter_do_exit(struct kprobe *p, struct pt_regs *regs)
 static void unregister_kretprobe_down_read(void)
 {
 	unregister_kretprobe(&kretprobe_down_read);
-	kinfo(" unregistered %s\n", kretprobe_down_read.kp.symbol_name);
+	kinfo(DBG_LV0, " unregistered %s\n", kretprobe_down_read.kp.symbol_name);
 }
 
 static void unregister_kprobe_down_read_killable(void)
 {
 	unregister_kretprobe(&kretprobe_down_read_killable);
-	kinfo(" unregistered %s\n", kretprobe_down_read_killable.kp.symbol_name);
+	kinfo(DBG_LV0, " unregistered %s\n", kretprobe_down_read_killable.kp.symbol_name);
 }
 
 static void unregister_kretprobe_down_read_trylock(void)
 {
 	unregister_kretprobe(&kretprobe_down_read_trylock);
-	kinfo(" unregistered %s\n", kretprobe_down_read_trylock.kp.symbol_name);
+	kinfo(DBG_LV0, " unregistered %s\n", kretprobe_down_read_trylock.kp.symbol_name);
 }
 
 static void unregister_kprobe_up_read(void)
 {
 	unregister_kprobe(&kp_up_read);
-	kinfo(" unregistered %s\n", kp_up_read.symbol_name);
+	kinfo(DBG_LV0, " unregistered %s\n", kp_up_read.symbol_name);
 }
 
 static void unregister_kretprobe_down_write(void)
 {
 	unregister_kretprobe(&kretprobe_down_write);
-	kinfo(" unregistered %s\n", kretprobe_down_write.kp.symbol_name);
+	kinfo(DBG_LV0, " unregistered %s\n", kretprobe_down_write.kp.symbol_name);
 }
 
 static void unregister_kprobe_down_write_killable(void)
 {
 	unregister_kretprobe(&kretprobe_down_write_killable);
-	kinfo(" unregistered %s\n", kretprobe_down_write_killable.kp.symbol_name);
+	kinfo(DBG_LV0, " unregistered %s\n", kretprobe_down_write_killable.kp.symbol_name);
 }
 
 static void unregister_kretprobe_down_write_trylock(void)
 {
 	unregister_kretprobe(&kretprobe_down_write_trylock);
-	kinfo(" unregistered %s\n", kretprobe_down_write_trylock.kp.symbol_name);
+	kinfo(DBG_LV0, " unregistered %s\n", kretprobe_down_write_trylock.kp.symbol_name);
 }
 
 static void unregister_kprobe_up_write(void)
 {
 	unregister_kprobe(&kp_up_write);
-	kinfo(" unregistered %s\n", kp_up_write.symbol_name);
+	kinfo(DBG_LV0, " unregistered %s\n", kp_up_write.symbol_name);
 }
 
 static void unregister_kprobe_do_exit(void)
 {
 	unregister_kprobe(&kp_do_exit);
-	kinfo(" unregistered %s\n", kp_do_exit.symbol_name);
+	kinfo(DBG_LV0, " unregistered %s\n", kp_do_exit.symbol_name);
 }
 
 static void unregister_kretprobe_mmfault(void)
 {
 	unregister_kretprobe(&kretprobe_mmfault);
-	kinfo(" unregistered %s\n", kretprobe_mmfault.kp.symbol_name);
+	kinfo(DBG_LV0, " unregistered %s\n", kretprobe_mmfault.kp.symbol_name);
 }
 
 static int register_kp_readsem(void)
@@ -967,35 +970,35 @@ static int register_kp_readsem(void)
 	/* up_read */
 	ret = register_kprobe(&kp_up_read);
 	if (ret < 0) {
-		kerr(" kprobe failed: %s\n", kp_up_read.symbol_name);
+		kerr(DBG_LV0, " kprobe failed: %s\n", kp_up_read.symbol_name);
 		goto out;
 	}
-	kinfo(" kprobe success: %s\n", kp_up_read.symbol_name);
+	kinfo(DBG_LV0, " kprobe success: %s\n", kp_up_read.symbol_name);
 
 	/* down_read */
 	ret = register_kretprobe(&kretprobe_down_read);
 	if (ret < 0) {
-		kerr(" kretprobe failed: %s\n", kretprobe_down_read.kp.symbol_name);
+		kerr(DBG_LV0, " kretprobe failed: %s\n", kretprobe_down_read.kp.symbol_name);
 		goto unreg_up_read;
 	}
-	kinfo(" kretprobe success: %s\n", kretprobe_down_read.kp.symbol_name);
+	kinfo(DBG_LV0, " kretprobe success: %s\n", kretprobe_down_read.kp.symbol_name);
 
 	/* down_read_trylock */
 	ret = register_kretprobe(&kretprobe_down_read_trylock);
 	if (ret < 0) {
-		kerr(" kretprobe failed: %s\n", kretprobe_down_read_trylock.kp.symbol_name);
+		kerr(DBG_LV0, " kretprobe failed: %s\n", kretprobe_down_read_trylock.kp.symbol_name);
 		goto unreg_down_read;
 	}
-	kinfo(" kretprobe success: %s\n", kretprobe_down_read_trylock.kp.symbol_name);
+	kinfo(DBG_LV0, " kretprobe success: %s\n", kretprobe_down_read_trylock.kp.symbol_name);
 
 	/* down_read_killable */
 	if (is_symbol_kprobe_support(kretprobe_down_read_killable.kp.symbol_name)) {
 		ret = register_kretprobe(&kretprobe_down_read_killable);
 		if (ret < 0) {
-			kerr(" kretprobe failed: %s\n", kretprobe_down_read_killable.kp.symbol_name);
+			kerr(DBG_LV0, " kretprobe failed: %s\n", kretprobe_down_read_killable.kp.symbol_name);
 			goto unreg_down_read_trylock;
 		} else {
-			kinfo(" kretprobe success: %s\n", kretprobe_down_read_killable.kp.symbol_name);
+			kinfo(DBG_LV0, " kretprobe success: %s\n", kretprobe_down_read_killable.kp.symbol_name);
 		}
 	}
 
@@ -1018,35 +1021,35 @@ static int register_kp_writesem(void)
 	/* up_write */
 	ret = register_kprobe(&kp_up_write);
 	if (ret < 0) {
-		kerr(" kprobe failed: %s\n", kp_up_write.symbol_name);
+		kerr(DBG_LV0, " kprobe failed: %s\n", kp_up_write.symbol_name);
 		goto out;
 	}
-	kinfo(" kprobe success: %s\n", kp_up_write.symbol_name);
+	kinfo(DBG_LV0, " kprobe success: %s\n", kp_up_write.symbol_name);
 
 	/* down_write */
 	ret = register_kretprobe(&kretprobe_down_write);
 	if (ret < 0) {
-		kerr(" kretprobe failed: %s\n", kretprobe_down_write.kp.symbol_name);
+		kerr(DBG_LV0, " kretprobe failed: %s\n", kretprobe_down_write.kp.symbol_name);
 		goto unreg_up_write;
 	}
-	kinfo(" kretprobe success: %s\n", kretprobe_down_write.kp.symbol_name);
+	kinfo(DBG_LV0, " kretprobe success: %s\n", kretprobe_down_write.kp.symbol_name);
 
 	/* down_write_trylock */
 	ret = register_kretprobe(&kretprobe_down_write_trylock);
 	if (ret < 0) {
-		kerr(" kretprobe failed: %s\n", kretprobe_down_write_trylock.kp.symbol_name);
+		kerr(DBG_LV0, " kretprobe failed: %s\n", kretprobe_down_write_trylock.kp.symbol_name);
 		goto unreg_down_write;
 	}
-	kinfo(" kretprobe success: %s\n", kretprobe_down_write_trylock.kp.symbol_name);
+	kinfo(DBG_LV0, " kretprobe success: %s\n", kretprobe_down_write_trylock.kp.symbol_name);
 
 	/* down_write_killable */
 	if (is_symbol_kprobe_support(kretprobe_down_write_killable.kp.symbol_name)) {
 		ret = register_kretprobe(&kretprobe_down_write_killable);
 		if (ret < 0) {
-			kerr(" kretprobe failed: %s\n", kretprobe_down_write_killable.kp.symbol_name);
+			kerr(DBG_LV0, " kretprobe failed: %s\n", kretprobe_down_write_killable.kp.symbol_name);
 			goto unreg_down_write_trylock;
 		} else {
-			kinfo(" kretprobe success: %s\n", kretprobe_down_write_killable.kp.symbol_name);
+			kinfo(DBG_LV0, " kretprobe success: %s\n", kretprobe_down_write_killable.kp.symbol_name);
 		}
 	}
 
@@ -1093,15 +1096,15 @@ static int register_kp(void)
 	/* do_exit */
 	ret = register_kprobe(&kp_do_exit);
 	if (ret < 0) {
-		kerr(" kprobe failed: %s\n", kp_do_exit.symbol_name);
+		kerr(DBG_LV0, " kprobe failed: %s\n", kp_do_exit.symbol_name);
 		goto out;
 	}
-	kinfo(" kprobe success: %s\n", kp_do_exit.symbol_name);
+	kinfo(DBG_LV0, " kprobe success: %s\n", kp_do_exit.symbol_name);
 
 	/* handle_mm_fault */
 	ret = register_kretprobe(&kretprobe_mmfault);
 	if (ret < 0) {
-		kerr(" kretprobe failed: %s\n", kretprobe_mmfault.kp.symbol_name);
+		kerr(DBG_LV0, " kretprobe failed: %s\n", kretprobe_mmfault.kp.symbol_name);
 		goto unreg_do_exit;
 	}
 	kinfo(" kretprobe success: %s\n", kretprobe_mmfault.kp.symbol_name);
@@ -1132,7 +1135,7 @@ static int if_all_procs_found(const int tell_miss)
 			found_num++;
 		} else {
 			if (tell_miss)
-				kinfo(" not found [%d] %s(%d)\n", i, comm[i], uid[i]);
+				kinfo(DBG_LV0, " not found [%d] %s(%d)\n", i, comm[i], uid[i]);
 		}
 		spin_unlock(MON_TASK_LOCK(i));
 	}
@@ -1140,7 +1143,7 @@ static int if_all_procs_found(const int tell_miss)
 	atomic_set(MON_NUM_OF_FOUND(), found_num);
 	if (found_num == comm_num) {
 		if (print_all_found)
-			kinfo(" all %d %s found\n",
+			kinfo(DBG_LV0, " all %d %s found\n",
 					found_num, (found_num > 1 ? "tasks" : "task"));
 		print_all_found = 0;
 		return 1;
@@ -1164,7 +1167,7 @@ static void do_find_monitor_process(void)
 			/* task cred protect by rcu read lock */
 			if (0 == strcmp(comm[i], p->comm) && uid[i] == _uid(p)) {
 				if (unlikely(p->flags & PF_EXITING)) {
-					kinfo(" found [%d][%d:%s](%d) but exiting\n",
+					kinfo(DBG_LV0, " found [%d][%d:%s](%d) but exiting\n",
 							i, p->tgid, comm[i], uid[i]);
 				} else {
 					spin_lock(MON_TASK_LOCK(i));
@@ -1177,7 +1180,7 @@ static void do_find_monitor_process(void)
 					}
 					spin_unlock(MON_TASK_LOCK(i));
 					put_task_struct(p);
-					kinfo(" %s [%d][%d:%s](%d) %s task(sen: 0x%lx)\n",
+					kinfo(DBG_LV0, " %s [%d][%d:%s](%d) %s task(sem: 0x%lx)\n",
 							state, i, MON_TASK_TGID(i), comm[i], uid[i],
 							(p->mm ? "user" : "kernel"), (unsigned long)MON_TASK_SEM(i));
 					break;
@@ -1221,13 +1224,13 @@ static int check_rwsem_param(void)
 {
 	int i;
 	if (comm_num != uid_num || comm_num == 0) {
-		kerr("[%s] the number of comm should be equal to uid\n", __FUNCTION__);
+		kerr(DBG_LV0, "[%s] the number of comm should be equal to uid\n", __FUNCTION__);
 		return -EINVAL;
 	}
 
 	for (i = 0; i < comm_num; i++) {
 		if (strlen(comm[i] - 1) > TASK_COMM_LEN) {
-			kerr("[%s] comm[%d]:%s exceeds max limit %d\n",
+			kerr(DBG_LV0, "[%s] comm[%d]:%s exceeds max limit %d\n",
 					__FUNCTION__, i, comm[i], TASK_COMM_LEN - 1);
 			return -EINVAL;
 		}
@@ -1235,7 +1238,7 @@ static int check_rwsem_param(void)
 
 	if (!ttms)
 		ttms = dims / 2;
-	kinfo("[%s] dump interval: %u ms, tolerate time: %u ms\n",
+	kinfo(DBG_LV0, "[%s] dump interval: %u ms, tolerate time: %u ms\n",
 			__FUNCTION__, dims, ttms);
 	return 0;
 }
@@ -1244,13 +1247,13 @@ static int check_showbt_param(void)
 {
 	int i;
 	if (proc_num == 0) {
-		kerr("[%s] the number of proc is 0\n", __FUNCTION__);
+		kerr(DBG_LV0, "[%s] the number of proc is 0\n", __FUNCTION__);
 		return -EINVAL;
 	}
 
 	for (i = 0; i < proc_num; i++) {
 		if (strlen(proc[i] - 1) > TASK_COMM_LEN) {
-			kerr("[%s] proc[%d]:%s exceeds max limit %d\n",
+			kerr(DBG_LV0, "[%s] proc[%d]:%s exceeds max limit %d\n",
 					__FUNCTION__, i, proc[i], TASK_COMM_LEN - 1);
 			return -EINVAL;
 		}
@@ -1303,7 +1306,7 @@ static void init_monitor_table(const int insmod)
 	}
 
 	if (insmod) {
-		kinfo("[%s] task monitor: 0x%lx. size: %lu (%lu*%d)\n",
+		kinfo(DBG_LV0, "[%s] task monitor: 0x%lx. size: %lu (%lu*%d)\n",
 			__FUNCTION__, (unsigned long)&mon,
 			sizeof(mon), sizeof(struct monitor_proc), MAX_MONITOR_NUM);
 	}
@@ -1313,7 +1316,7 @@ static int alloc_dump_obj(struct dump_mngr *mngr, int obj_cnt)
 {
 	unsigned long alloc_size;
 	mngr->is_dump = dump_scope & mngr->is_dump;
-	kinfo("[%s] %11s mngr: 0x%lx %s\n",
+	kinfo(DBG_LV0, "[%s] %11s mngr: 0x%lx %s\n",
 			__FUNCTION__, mngr->obj_name,
 			(unsigned long)mngr, mngr->is_dump ? "" : "(not set)");
 	if (!mngr->is_dump) {
@@ -1326,7 +1329,7 @@ static int alloc_dump_obj(struct dump_mngr *mngr, int obj_cnt)
 	if (mngr->obj)
 		init_dump_manager(mngr);
 
-	kinfo("[%s] %11s  obj: 0x%lx, size: %lu (%ld*%d)\n",
+	kinfo(DBG_LV0, "[%s] %11s  obj: 0x%lx, size: %lu (%ld*%d)\n",
 			__FUNCTION__, mngr->obj_name, (unsigned long)mngr->obj,
 			alloc_size, sizeof(struct dump_object), mngr->obj_cnt);
 	return (mngr->obj ? 1 : 0);
@@ -1362,7 +1365,8 @@ static int __init show_bt_init(void)
 {
 	int ret = 0;
 
-	kinfo("[%s] begin\n", __FUNCTION__);
+	debug |= (DBG_LV0 | DBG_LV1);
+	kinfo(DBG_LV0, "[%s] begin\n", __FUNCTION__);
 
 	ret = check_parameters();
 	if (ret != 0)
@@ -1379,11 +1383,11 @@ static int __init show_bt_init(void)
 	INIT_DELAYED_WORK(&fmp_dw, find_monitor_proc_dwork);
 	INIT_DELAYED_WORK(&dumptask_dw, dump_task_dwork);
 	schedule_delayed_work(&fmp_dw, 0);
-	kinfo("[%s] success\n\n", __FUNCTION__);
+	kinfo(DBG_LV0, "[%s] success\n\n", __FUNCTION__);
 	return 0;
 
 out:
-	kerr("[%s] failed\n\n", __FUNCTION__);
+	kerr(DBG_LV0, "[%s] failed\n\n", __FUNCTION__);
 	return ret;
 }
 
@@ -1402,7 +1406,7 @@ static void __exit show_bt_exit(void)
 
 	init_monitor_table(0);
 
-	kinfo("[%s] success\n\n", __FUNCTION__);
+	kinfo(DBG_LV0, "[%s] success\n\n", __FUNCTION__);
 }
 
 module_init(show_bt_init)
