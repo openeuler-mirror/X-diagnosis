@@ -22,6 +22,7 @@ struct task_struct *get_rwsem_owner(struct rw_semaphore *rwsem)
 		return NULL;
 	}
 #elif LINUX_VERSION_CODE == KERNEL_VERSION(3, 10, 0) || LINUX_VERSION_CODE == KERNEL_VERSION(2, 6, 32)
+		/* struct rw_semaphore has no member owner or count */
 		return NULL;
 #else
 		/* let the compiler report an error */
