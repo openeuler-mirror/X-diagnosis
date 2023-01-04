@@ -21,7 +21,7 @@ struct task_struct *get_rwsem_owner(struct rw_semaphore *rwsem)
 	} else {
 		return NULL;
 	}
-#elif LINUX_VERSION_CODE == KERNEL_VERSION(3, 10, 0)
+#elif LINUX_VERSION_CODE == KERNEL_VERSION(3, 10, 0) || LINUX_VERSION_CODE == KERNEL_VERSION(2, 6, 32)
 		return NULL;
 #endif
 }
@@ -30,7 +30,7 @@ int has_rwsem_owner(void)
 {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 18, 0)
 		return 1;
-#elif LINUX_VERSION_CODE == KERNEL_VERSION(3, 10, 0)
+#elif LINUX_VERSION_CODE == KERNEL_VERSION(3, 10, 0) || LINUX_VERSION_CODE == KERNEL_VERSION(2, 6, 32)
 		return 0;
 #endif
 }
@@ -43,7 +43,7 @@ int is_symbol_kprobe_support(const char *name)
 	 || (0 == strcmp(name, DOWN_WRITE_KILLABLE_SYMBOL_NAME))) {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 18, 0)
 		return 1;
-#elif LINUX_VERSION_CODE == KERNEL_VERSION(3, 10, 0)
+#elif LINUX_VERSION_CODE == KERNEL_VERSION(3, 10, 0) || LINUX_VERSION_CODE == KERNEL_VERSION(2, 6, 32)
 		return 0;
 #endif
 	} else {
