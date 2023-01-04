@@ -487,3 +487,64 @@ FUNC = {
 	PROC_IRQ_CPU   : irq_cpu_affinity_exec,
 }
 
+def int_positive(n):
+	n = int(n)
+	if n <= 0:
+		raise argparse.ArgumentTypeError("parameter must > 0")
+	return n
+
+def count_type(n):
+	n = int(n)
+	if n < 0:
+		raise argparse.ArgumentTypeError("count must >= 0")
+	return n
+
+def ratio_type(ratio):
+	ratio = int(ratio)
+	if not (0 <= ratio <= 100):
+		raise argparse.ArgumentTypeError("ratio must in range[0, 100]")
+	return ratio
+
+def path_type(path):
+	if os.path.isdir(path) is True and os.path.exists(path) is True:
+		return path
+	else:
+		return ""
+
+def file_type(file):
+	if os.path.isfile(file) is True and os.path.exists(file) is True:
+		return file
+	else:
+		raise argparse.ArgumentTypeError("invalid file")
+
+def digit_list(str_input):
+	str_input = str_input.strip()
+	if len(str_input) == 0:
+		return []
+	else:
+		list_input = str_input.split(",")
+		# print(list_input)
+		for i in list_input:
+			if i.isdigit() is False:
+				print("irq number must be positive integer")
+				sys.exit(-1)
+		return list_input
+	
+
+def build_buddyinfo_param(func_parsers):
+	buddyinfo = func_parsers.add_parser(PROC_BUDDYINFO, help="show more detailed buddyinfo")
+	buddyinfo.add_argument("-t", type=int, dest="time", default=1, choices=[0, 1], help="show time stamp")
+	buddyinfo.add_argument("-u", type=str.upper, dest="unit", default="M", choices=['K', 'M', 'G'], help="unit displayed {K,M,G}")
+	buddyinfo.add_argument("-n", type=count_type, dest="count", default=1, help="collect count")
+	buddyinfo.add_argument("-i", type=int_positive, dest="interval", default=0, help="time interval")
+	buddyinfo.add_argument("-o", type=int, dest="orig", default=0, choices=[0, 1], help="display original info")
+	buddyinfo.add_argument("-d", type=int, dest="debug", default=0, choices=[0, 1], help="show debug info")
+
+if __name__=="__main__":
+	main_parser = argparse.ArgumentParser(description="Linux debug tool like swiss army knife")
+	sub_parsers = main_parser.add_subparsers(dest="file", help="proc-files")
+
+	build_buddyinfo_param(sub_parsers)
+
+	args = main_parser.parse_args()
+	FUNC[args.file](args)
