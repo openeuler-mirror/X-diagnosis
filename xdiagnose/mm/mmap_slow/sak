@@ -218,3 +218,54 @@ class IrqInfo:
 				before = after
 				ts_b = ts_a
 
+class Btt:
+	'''
+	timeout interval blktrace -d /dev/sda
+	blkparse -i sda -d sda.blkparse.out
+	btt -i sda.blkparse.out -o sda.btt.out
+	btt -i sda.blkparse.out -z sda.btt.q2d_latencies
+	btt -i sda.blkparse.out -l sda.btt.d2c_latencies
+	btt -i sda.blkparse.out -q sda.btt.q2c_latencies
+	btt -i sda.blkparse.out -Q sda.btt.active-queue-depth
+	'''
+	btt_class = {
+		"q2d_latencies":      "sec  q2d(AVG)      q2d(MAX)",
+		"d2c_latencies":      "sec  d2c(AVG)      d2c(MAX)",
+		"q2c_latencies":      "sec  q2c(AVG)      q2c(MAX)",
+		"active-queue-depth": "sec  depth(AVG)    depth(MAX)",
+	}
+	
+	def check_blktrace(self):
+		target = "{0}.blktrace".format(self.dev)
+		files = os.listdir(self.input)
+		for file in files:
+			if target in file:				
+				return True
+
+		return False
+
+	def __init__(self, args):
+		if len(args.device) == 0:
+			print("invalid device name!")
+			sys.exit(-1)
+
+		if args.output == "":
+			date = time.strftime("%Y%m%d_%H%M%S", time.localtime())
+			self.output = "{0}/btt_{1}".format(os.getcwd(), date)
+
+		self.input = os.getcwd()
+		self.dev, self.act = args.device, args.action
+		if self.check_blktrace() is False:
+			print("{0} blktrace file not found in path '{1}'".format(self.dev, self.input))
+			sys.exit(-1)
+
+	def find_file(self, file_path):
+		dir = os.path.dirname(file_path)
+		file = os.path.split(file_path)[-1]
+		files = os.listdir(dir)
+		for f in files:
+			if file in f:				
+				return os.path.join(dir, f)
+
+		print("file {0} not found in {1}".format(file, dir))
+		return file
