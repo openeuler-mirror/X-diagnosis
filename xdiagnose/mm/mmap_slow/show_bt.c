@@ -113,12 +113,22 @@ static struct dump_mngr mmfault_caller = {.obj_name = "mm fault", .is_dump = DUM
 
 static atomic_t mod_exiting = ATOMIC_INIT(0);
 
-#define LOG_PER_INFO "[dbg] "
+#define LOG_PFX "[dbg] "
+#define kinfos(_level, fmt, ...)	({				\
+	if (debug) {							\
+		pr_info(LOG_PFX pr_fmt(fmt), ##__VA_ARGS__);}})
 
+#define kwarns(_level, fmt, ...) ({					\
+	if (debug) {							\
+		pr_warning(LOG_PFX pr_fmt(fmt), ##__VA_ARGS__);}})
 
-#define kinfo(fmt, ...) pr_info(LOG_PFX pr_fmt(fmt), ##__VA_ARGS__)
-#define kwarn(fmt, ...) pr_warning(LOG_PFX pr_fmt(fmt), ##__VA_ARGS__)
-#define kerr(fmt, ...)  pr_err(LOG_PFX pr_fmt(fmt), ##__VA_ARGS__)
+#define kerrs(_level, fmt, ...) ({					\
+	if (debug) {							\
+		pr_err(LOG_PFX pr_fmt(fmt), ##__VA_ARGS__);}})
+
+#define kinfo(fmt, ...) kinfos(pr_fmt(fmt), ##__VA_ARGS__)
+#define kwarn(fmt, ...) kwarns(pr_fmt(fmt), ##__VA_ARGS__)
+#define kerr(fmt, ...)   kerrs(pr_fmt(fmt), ##__VA_ARGS__)
 
 /*
  * down_read/down_read_killable
