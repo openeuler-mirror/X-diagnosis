@@ -106,3 +106,49 @@ class BuddyInfo:
 				if i == self.count - 1:
 					break
 				time.sleep(self.interval)
+
+class IrqInfo:
+	'''
+	sak interrupts: show the difference of /proc/interrupts count within 1 second
+	sak softirqs:   show the difference of /proc/softirqs   count within 1 second
+	'''
+	def get_common_info(self, file):
+		with open(self.file, "r") as f:
+			header = f.readline().strip("\n")
+			return header.strip(), len(header.split())
+
+	def __init__(self, args):
+		self.file = "/proc/" + args.proc_file
+		self.header, self.cpus = self.get_common_info(self.file)
+		self.count, self.interval = args.count, args.interval
+
+	def show_matrix(self, irqs_vec, timestamp, display):
+		if display is False:
+			return
+
+		print("{0} {1}".format(self.header, timestamp))
+		for irqs in irqs_vec:
+			for irq in irqs:
+				print("{0:9} ".format(irq)),
+			print("\n"),
+		print("\n")
+
+	def save_irq(self, irqs_vec, irq_desc, irqs):
+		record = []
+		irq_name = irq_desc + ":"
+
+		if len(irqs) > self.cpus:
+			for i in range(self.cpus):
+				record.append(irqs[i])
+
+			for i in range(self.cpus, len(irqs)):
+				irq_name += (irqs[i] + "_")
+			irq_name = irq_name[:-1]
+			record.append(irq_name)
+		else:
+			for irq in irqs:
+				record.append(irq)
+			record.append(irq_name)
+
+		# print("add record: {0}".format(record))
+		irqs_vec.append(record)
