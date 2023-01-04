@@ -23,6 +23,8 @@ struct task_struct *get_rwsem_owner(struct rw_semaphore *rwsem)
 	}
 #elif LINUX_VERSION_CODE == KERNEL_VERSION(3, 10, 0) || LINUX_VERSION_CODE == KERNEL_VERSION(2, 6, 32)
 		return NULL;
+#else
+		/* let the compiler report an error */
 #endif
 }
 
@@ -45,6 +47,8 @@ int is_symbol_kprobe_support(const char *name)
 		return 1;
 #elif LINUX_VERSION_CODE == KERNEL_VERSION(3, 10, 0) || LINUX_VERSION_CODE == KERNEL_VERSION(2, 6, 32)
 		return 0;
+#else
+		/* let the compiler report an error */
 #endif
 	} else {
 		return 1;
