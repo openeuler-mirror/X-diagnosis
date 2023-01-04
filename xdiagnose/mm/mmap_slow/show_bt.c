@@ -265,11 +265,11 @@ static void show_dump_obj(struct dump_mngr *mngr)
 		spin_lock(&obj->lock);
 		o = obj->caller;
 		if (o) {
-			pr_info("[%s] obj[%d][%d:%s:%d] tsk_s: 0x%lx\n",
+			pr_info("[%s] obj[%d][%d:%s:%d] tsk_sem: 0x%lx\n",
 				__FUNCTION__, i, o->tgid, o->comm, o->pid,
 				(unsigned long)obj->tsk_sem);
 		} else {
-			pr_info("[%s] obj[%d] caller: 0x%lx, tsk_s: 0x%lx\n",
+			pr_info("[%s] obj[%d] caller: 0x%lx, tsk_sem: 0x%lx\n",
 				__FUNCTION__, i,
 				(unsigned long)obj->caller, (unsigned long)obj->tsk_sem);
 		}
@@ -775,13 +775,13 @@ static void clear_dump_obj(struct dump_mngr *mngr,
 		spin_lock(&obj->lock);
 		if (tsk && tsk == obj->caller) {
 			clear = 1;
-			pr_info("[%s by tsk] %s obj[%d][%d:%s:%d] tsk_sen: 0x%lx\n",
+			pr_info("[%s by tsk] %s obj[%d][%d:%s:%d] tsk_sem: 0x%lx\n",
 				__FUNCTION__, mngr->obj_name, i, tsk->tgid, tsk->comm, tsk->pid,
 				(unsigned long)obj->tsk_sem);
 		}
 		if (!clear && (sem && sem == obj->tsk_sem)) {
 			clear = 1;
-			pr_info("[%s by sem] %s obj[%d][%d:%s:%d] tsk_sen: 0x%lx\n",
+			pr_info("[%s by sem] %s obj[%d][%d:%s:%d] tsk_sem: 0x%lx\n",
 				__FUNCTION__, mngr->obj_name, i, cur->tgid, cur->comm, cur->pid,
 				(unsigned long)sem);
 		}
