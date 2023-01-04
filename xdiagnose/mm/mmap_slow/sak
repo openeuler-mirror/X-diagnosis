@@ -558,6 +558,12 @@ def build_btt_param(func_parsers):
 	btt.add_argument("-o", type=path_type, dest="output", default="", help="output dir")
 	btt.add_argument("-a", type=int, dest="action", default=1, choices=[0, 1], help="just show command ")
 
+def build_mpstat_param(func_parsers):
+	mpstat = func_parsers.add_parser(CMD_MPSTAT, help="analyze cpus usage of mpstat -P ALL")
+	mpstat.add_argument("-f", type=file_type, dest="logfile", default="", help="mpstat log file")
+	mpstat.add_argument("-i", type=str, dest="field", default="idle", choices=MpStat.choices, help="mpstat field")
+	mpstat.add_argument("-r", type=ratio_type, dest="ratio", default=99, help="cpu usage")
+
 if __name__=="__main__":
 	main_parser = argparse.ArgumentParser(description="Linux debug tool like swiss army knife")
 	sub_parsers = main_parser.add_subparsers(dest="file", help="proc-files")
@@ -566,6 +572,7 @@ if __name__=="__main__":
 	build_interrupts_param(sub_parsers)
 	build_softirqs_param(sub_parsers)
 	build_btt_param(sub_parsers)
+	build_mpstat_param(sub_parsers)
 
 	args = main_parser.parse_args()
 	FUNC[args.file](args)
