@@ -286,7 +286,9 @@ static void down_rwsem_acquire(struct kretprobe_instance *ri, struct pt_regs *re
 {
 	struct my_data *data;
 	struct rw_semaphore *sem;
+#ifdef CONFIG_X86_64
 	sem = (struct rw_semaphore *)regs->di;
+#endif
 	data = (struct my_data *)ri->data;
 	data->sem = sem;
 	data->down_time = ktime_get();
@@ -442,8 +444,9 @@ static int down_rwsem_acquired_release(struct kprobe *p, struct pt_regs *regs, s
 	struct dump_object *obj;
 	const char *symbol_name = p->symbol_name;
 	struct task_struct *task = current;
+#ifdef CONFIG_X86_64
 	sem = (struct rw_semaphore *)regs->di;
-
+#endif
 	if (-1 == find_rwsem(sem))
 		return 0;
 
@@ -702,10 +705,11 @@ static int enter_mmfault(struct kretprobe_instance *ri, struct pt_regs *regs)
 		const char *kp_name = ri->rp->kp.symbol_name;
 		struct my_vma *data = (struct my_vma *)ri->data;
 
+#ifdef CONFIG_X86_64
 		data->vma = (struct vm_area_struct *)regs->di;
 		data->address = regs->si;
 		data->flags = regs->dx;
-
+#endif
 		add_task_to(&mmfault_caller, current, kp_name);
 	}
 
@@ -808,8 +812,9 @@ static int enter_do_exit(struct kprobe *p, struct pt_regs *regs)
 {
 	int i;
 	int main_exit = 0;
+#ifdef CONFIG_X86_64
 	long exit_code = regs->di;
-
+#endif
 	i = find_proc(current);
 	if (-1 != i) {
 		if (current->pid == current->tgid) {
