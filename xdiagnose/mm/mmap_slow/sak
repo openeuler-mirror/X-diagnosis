@@ -540,11 +540,25 @@ def build_buddyinfo_param(func_parsers):
 	buddyinfo.add_argument("-o", type=int, dest="orig", default=0, choices=[0, 1], help="display original info")
 	buddyinfo.add_argument("-d", type=int, dest="debug", default=0, choices=[0, 1], help="show debug info")
 
+def build_interrupts_param(func_parsers):
+	interrupts = func_parsers.add_parser(PROC_INTERRUPT, help="show the D-value within interval")
+	interrupts.add_argument("-f", type=str, dest="proc_file", default="interrupts", help="/proc/interrupts")
+	interrupts.add_argument("-n", type=count_type, dest="count", default=1, help="collect count")
+	interrupts.add_argument("-i", type=int_positive, dest="interval", default=1, help="time interval")
+
+def build_softirqs_param(func_parsers):
+	softirqs = func_parsers.add_parser(PROC_SOFTIRQS, help="show the D-value within interval")
+	softirqs.add_argument("-f", type=str, dest="proc_file", default="softirqs", help="/proc/softirqs")
+	softirqs.add_argument("-n", type=count_type, dest="count", default=1, help="collect count")
+	softirqs.add_argument("-i", type=int_positive, dest="interval", default=1, help="time interval")
+
 if __name__=="__main__":
 	main_parser = argparse.ArgumentParser(description="Linux debug tool like swiss army knife")
 	sub_parsers = main_parser.add_subparsers(dest="file", help="proc-files")
 
 	build_buddyinfo_param(sub_parsers)
+	build_interrupts_param(sub_parsers)
+	build_softirqs_param(sub_parsers)
 
 	args = main_parser.parse_args()
 	FUNC[args.file](args)
