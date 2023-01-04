@@ -36,7 +36,9 @@ static unsigned int uid[MAX_MONITOR_NUM];
 static unsigned int uid_num = 0;
 module_param_array(uid, uint, &uid_num, 0400);
 
+/* find interval ms */
 static unsigned int fims = 10000;
+module_param(fims, uint, 0400);
 static struct delayed_work fmp_dw;
 
 static unsigned int dims = 1000;
