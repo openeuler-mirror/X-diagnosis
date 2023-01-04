@@ -64,7 +64,20 @@ int is_symbol_kprobe_support(const char *name)
 
 static int _lock_trace(struct task_struct *task) { return mutex_trylock(&task->signal->cred_guard_mutex); }
 static void _unlock_trace(struct task_struct *task) { mutex_unlock(&task->signal->cred_guard_mutex); }
+#elif LINUX_VERSION_CODE == KERNEL_VERSION(2, 6, 32)
+#define DUMP_QUEUE_DELAYED_WORK(dwork, delay)	schedule_delayed_work((dwork), (delay))
+#define _UID_VALUE(cred)	((cred)->uid)
+#define PRINT_ADDRESS(seq, addr)	printk(" {%d}    %pS\n", (seq), (addr))
+#define dump_each_thread(j, p, t, dump_func)\
+	t = p;									\
+	do {									\
+		printk(" {%d} [%d:%s:%d]\n", j, t->tgid, t->comm, t->pid);	\
+		dump_func(t, j);					\
+		j++;								\
+	} while_each_thread(p, t)
 
+static int _lock_trace(struct task_struct *task) { return 1; }
+static void _unlock_trace(struct task_struct *task) {}
 
 #endif
 
