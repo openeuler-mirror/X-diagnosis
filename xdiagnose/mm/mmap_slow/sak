@@ -395,3 +395,31 @@ class MpStat:
 	def run(self):
 		print("checking {0} which '{1}' field >= {2}%".format(self.logfile, self.field, self.ratio))
 		self.check_mpstat()
+
+class IrqSmpAffinity:
+	PROC_IRQ_PATH = "/proc/irq/"
+
+	def __init__(self, args):
+		self.count, self.interval = args.count, args.interval
+		self.include, self.exclude = args.include, args.exclude
+		if len(self.include) and len(self.exclude):
+			result = list(set(self.include) & set(self.exclude))
+			# print(self.include, len(self.include), self.exclude, len(self.exclude), result, len(result))
+			if len(result) != 0:
+				print("paramters conflict! intersection is {0}".format(result))
+				sys.exit(-1)
+
+	def get_irq_cpu_list(self, smp_affinity_list):
+		cpu_list = "failed"
+		with open(smp_affinity_list) as f:
+			cpu_list = f.read().strip("\n")
+
+		return cpu_list
+			
+	def show_irq_affinity(self, irq):
+		file = self.PROC_IRQ_PATH + irq + "/smp_affinity_list"
+		if os.path.exists(file) is False:
+			return
+
+		cpu_list = self.get_irq_cpu_list(file)
+		print("[irq: {0:3}]: {1}".format(irq, cpu_list))
