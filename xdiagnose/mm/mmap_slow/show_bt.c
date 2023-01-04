@@ -41,7 +41,9 @@ static unsigned int fims = 10000;
 module_param(fims, uint, 0400);
 static struct delayed_work fmp_dw;
 
+/* dump interval ms */
 static unsigned int dims = 1000;
+module_param(dims, uint, 0400);
 static struct delayed_work dumptask_dw;
 
 static unsigned int ttms = 1000;
