@@ -20,9 +20,11 @@ rpm -ivh xdiagnose-1.x-x.rpm
 * xd_tcpreststack
 * xd_tcpskinfo
 * xd_arpstormcheck
+* xd_netvringcheck
 * xd_sysinspect
 * xd_scsiiocount
 * xd_scsiiotrace
+* xd_ext4fsstat
 
 ### 1.0 xdiag
 ```shell
@@ -230,7 +232,37 @@ Usage: xd_arpstormcheck [ OPTIONS ]
 #### -f,--freq 
 监控的告警阈值，每秒收到的报文，超过了此阈值，则告警提示网络风暴相关信息；
 
-### 1.4 xd_scsiiotrace
+### 1.4 xd_netvringcheck
+
+```shell
+Usage: xd_netvringcheck DEVNAME [rx/tx] [ OPTIONS ]
+  [OPTIONS]
+	-h,--help			this message
+	-i,--interval			The interval time of the probe/s
+	-q,--queueidx			filter virtnet queue idx
+```
+
+#### 功能：
+
+用于监控virt_net 网卡前后端virtqueue ring的使用状态.
+
+#### DEVNAME
+
+指定需要监控的网卡名称，无默认值，强制指定.
+
+#### [rx/tx]
+
+指定收发队列（发送：tx，接收：rx），无默认值，强制指定.
+
+#### -i,--interval
+
+监控的时间间隔，默认1s.
+
+#### -q,--queueidx
+
+网卡队列的序号，默认监控此网卡的所有队列.
+
+### 1.5 xd_scsiiotrace
 
 ```shell
 USAGE: xd_scsiiotrace [--help] [-d h:c:t:l] [-E]
@@ -265,7 +297,7 @@ DISPOSION：
 #### -p,--parse 
 用于解析 DRIVER_RESULT或者SCSI_RESULT值具体含义. 默认显示hex值
 
-### 1.5 xd_scsiiocount
+### 1.6 xd_scsiiocount
 
 ```shell
 USAGE: xd_scsiiocount [--help] [-t times] [-d device] [-i interval]
@@ -291,7 +323,7 @@ EXAMPLES:
 #### -t,--times 
 监控的次数. 次数达到后，则结束本次监控
 
-### 1.6 xd_ext4fsstat
+### 1.7 xd_ext4fsstat
 
 ```shell
 USAGE: xd_ext4fstat [--help] [-t times] [-i interval] [-s SORT] [-o opcode]
