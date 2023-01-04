@@ -23,11 +23,11 @@ insmod showbt.ko comm="java" uid=2201 dims=500
 comm: 进程名
 uid:  进程的uid
 
-dims: dump interval ms。根据该值周期性打印可疑线程信息和内核态调用栈。此值设置太小可能会冲日志，设置太大可能会抓不到，请结合实际表现设置经验值。
+dims: dump interval ms, 默认1秒。根据该值周期性打印可疑线程信息和内核态调用栈。此值设置太小可能会冲日志，设置太大可能会抓不到，请结合实际表现设置经验值。
 
-fims: find interval ms。根据该值周期性查找被监控的进程，直到找到为止。建议使用默认值。
-ttms: tolerate time ms。容忍时间，持有锁或者调 mmap 耗时超过此阈值会打印告警，或者主动 panic。默认取 dims 值的一半。建议不设置。
-sop: 如果设置为1，当检测到长时间卡且达到 ttms 阈值，则主动 panic。
+fims: find interval ms，默认10秒。根据该值周期性查找被监控的进程，直到找到为止。建议使用默认值。
+ttms: tolerate time ms，默认0.5秒。容忍时间，持有锁或者调 mmap 耗时超过此阈值会打印告警，或者主动 panic。默认取 dims 值的一半。建议不设置。
+sop: 默认是0。如果设置为1，当检测到长时间卡且达到 ttms 阈值，则主动 panic。
 
 ## 【编译方法】
 
