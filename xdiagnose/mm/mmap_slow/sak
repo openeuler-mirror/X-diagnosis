@@ -269,3 +269,59 @@ class Btt:
 
 		print("file {0} not found in {1}".format(file, dir))
 		return file
+
+	def show_statistics(self, file, result):
+		type = file.split(".")[-1]
+		if self.btt_class.has_key(type) is True:
+			print(self.btt_class[type])
+			for second in sorted(result):
+				info = result[second]
+				print("%3d: %9.0f %9.0f" % (second, info[0]/info[1], info[2]))
+
+	def parse_btt(self, file):
+		btt_file = self.find_file(file)
+
+		# {second: [sum, count, max]}
+		result = {}
+
+		f = open(btt_file, 'r')
+		while True:
+			lines = f.readlines(10000)
+			if not lines:
+				break
+			for line in lines:
+				time, latency = line.split()
+				latencies = float(latency)
+				sec = int(float(time))
+				if result.has_key(sec) is True:
+					result[sec][0] += latencies
+					result[sec][1] += 1
+					if result[sec][2] < latencies:
+						result[sec][2] = latencies
+				else:
+					result[sec] = [latencies, 1, 0]
+		f.close
+		self.show_statistics(file, result)
+
+	def run(self):
+		rc = RunCmd(self.act)
+		rc.run("mkdir -p {0}".format(self.output))
+
+		blkp_out_file = "{0}/{1}.blkparse.out".format(self.output, self.dev)
+		btt_out_file = "{0}/{1}.btt.out".format(self.output, self.dev)
+		btt_q2d_file = "{0}/{1}.btt.q2d_latencies".format(self.output, self.dev)
+		btt_d2c_file = "{0}/{1}.btt.d2c_latencies".format(self.output, self.dev)
+		btt_q2c_file = "{0}/{1}.btt.q2c_latencies".format(self.output, self.dev)
+		btt_aqd_file = "{0}/{1}.btt.active-queue-depth".format(self.output, self.dev)
+
+		rc.run("blkparse -i {0} -d {1}".format(self.dev, blkp_out_file))
+		rc.run("btt -i {0} -o {1}".format(blkp_out_file, btt_out_file))
+		rc.run("btt -i {0} -z {1}".format(blkp_out_file, btt_q2d_file))
+		rc.run("btt -i {0} -l {1}".format(blkp_out_file, btt_d2c_file))
+		rc.run("btt -i {0} -q {1}".format(blkp_out_file, btt_q2c_file))
+		rc.run("btt -i {0} -Q {1}".format(blkp_out_file, btt_aqd_file))
+		
+		self.parse_btt(btt_q2d_file)
+		self.parse_btt(btt_d2c_file)
+		self.parse_btt(btt_q2c_file)
+		self.parse_btt(btt_aqd_file)
