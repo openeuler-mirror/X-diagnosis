@@ -552,6 +552,12 @@ def build_softirqs_param(func_parsers):
 	softirqs.add_argument("-n", type=count_type, dest="count", default=1, help="collect count")
 	softirqs.add_argument("-i", type=int_positive, dest="interval", default=1, help="time interval")
 
+def build_btt_param(func_parsers):
+	btt = func_parsers.add_parser(CMD_BTT, help="analyze blkparse/btt's output files")
+	btt.add_argument("-d", type=str, dest="device", default="", help="disk device name")
+	btt.add_argument("-o", type=path_type, dest="output", default="", help="output dir")
+	btt.add_argument("-a", type=int, dest="action", default=1, choices=[0, 1], help="just show command ")
+
 if __name__=="__main__":
 	main_parser = argparse.ArgumentParser(description="Linux debug tool like swiss army knife")
 	sub_parsers = main_parser.add_subparsers(dest="file", help="proc-files")
@@ -559,6 +565,7 @@ if __name__=="__main__":
 	build_buddyinfo_param(sub_parsers)
 	build_interrupts_param(sub_parsers)
 	build_softirqs_param(sub_parsers)
+	build_btt_param(sub_parsers)
 
 	args = main_parser.parse_args()
 	FUNC[args.file](args)
