@@ -63,7 +63,7 @@ void *dynamic_fn(void *arg)
 	sleep(1);
 	gettimeofday(&end, NULL);
 
-	printf("         [%ld.%ld][thread:%2d][%6d:%s:%6d] ran %ld ms\n",
+	printf("[%ld.%ld][thread:%2d][%6d:%s:%6d] ran %ld ms\n",
 		end.tv_sec, end.tv_usec, num, getpid(), tname, gettid(),
 		calc_timeval_diff(&start, &end));
 	return NULL;
@@ -79,7 +79,7 @@ static void dynamic_threads(void)
 		for (i = 0; i < tn; i++) {
 			rc = pthread_create(&ta[i], NULL, dynamic_fn, (void *)i);
 			if (rc) {
-				printf("         [thread:%2d] create dynamic threads failed. %s\n", i, strerror(errno));
+				printf("[thread:%2d] create dynamic threads failed. %s\n", i, strerror(errno));
 				ta[i] = 0;
 				sleep(2);
 				continue;
