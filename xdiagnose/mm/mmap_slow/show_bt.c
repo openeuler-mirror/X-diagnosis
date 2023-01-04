@@ -128,9 +128,9 @@ static atomic_t mod_exiting = ATOMIC_INIT(0);
 	if ((_level) & debug) {							\
 		pr_err(LOG_PFX pr_fmt(fmt), ##__VA_ARGS__);}})
 
-#define kinfo(_level, fmt, ...) kinfos(_level, pr_fmt(fmt), ##__VA_ARGS__)
-#define kwarn(_level, fmt, ...) kwarns(_level, pr_fmt(fmt), ##__VA_ARGS__)
-#define kerr(_level, fmt, ...)   kerrs(_level, pr_fmt(fmt), ##__VA_ARGS__)
+#define kinfo(_level, fmt, ...) kinfos(_level, "[cpu%03d]" pr_fmt(fmt), smp_processor_id(), ##__VA_ARGS__)
+#define kwarn(_level, fmt, ...) kwarns(_level, "[cpu%03d]" pr_fmt(fmt), smp_processor_id(), ##__VA_ARGS__)
+#define kerr(_level, fmt, ...)   kerrs(_level, "[cpu%03d]" pr_fmt(fmt), smp_processor_id(), ##__VA_ARGS__)
 
 /*
  * down_read/down_read_killable
@@ -270,10 +270,10 @@ static void dump_rwsem_owner(void)
 
 		owner = get_rwsem_owner(MON_TASK_SEM(i));
 		if (owner)
-			kwarn(DBG_LV0, "monitor[%d] tgid: %d owner=>[%d:%s:%d]\n",
+			kwarns(DBG_LV0, "monitor[%d] tgid: %d owner=>[%d:%s:%d]\n",
 				i, MON_TASK_TGID(i), owner->tgid, owner->comm, owner->pid);
 		else
-			kwarn(DBG_LV0, "monitor[%d] tgid: %d owner=>reader\n", i, MON_TASK_TGID(i));
+			kwarns(DBG_LV0, "monitor[%d] tgid: %d owner=>reader\n", i, MON_TASK_TGID(i));
 		spin_unlock(MON_TASK_LOCK(i));
 	}
 }
@@ -540,7 +540,7 @@ static void do_task_dumpstack(struct task_struct *task, const int seq)
 	if (_lock_trace(task)) {
 		unsigned int i;
 
-		kwarn(DBG_LV0, " {%d} Call trace:\n", seq);
+		kwarns(DBG_LV0, " {%d} Call trace:\n", seq);
 		save_stack_trace_tsk(task, &trace);
 
 		for (i = 0; i < trace.nr_entries; i++) {
@@ -549,7 +549,7 @@ static void do_task_dumpstack(struct task_struct *task, const int seq)
 
 		_unlock_trace(task);
 	} else {
-		kwarn(DBG_LV0, " {%d} [cpu%02d] mutex_trylock failed for dump [%d:%s:%d]\n",
+		kwarns(DBG_LV0, " {%d} [cpu%02d] mutex_trylock failed for dump [%d:%s:%d]\n",
 			seq, smp_processor_id(), task->tgid, task->comm, task->pid);
 	}
 	return;
@@ -585,12 +585,12 @@ static int dump_task(struct dump_mngr *mngr)
 		cost_ms = NS_TO_MS(ktime_to_ns(ktime_sub(ktime_get(), obj->start)));
 		if (cost_ms > ttms) {
 			if (count == 1) {
-				kinfo(DBG_LV0, "--------------- [cpu%02d] begin to dump %s ---------------\n",
+				kinfos(DBG_LV0, "--------------- [cpu%02d] begin to dump %s ---------------\n",
 					smp_processor_id(), mngr->obj_name);
 				print_end_mark = 1;
 			}
 
-			kwarn(DBG_LV0, " {%d} warning! [%d:%s:%d] %s cost %u ms",
+			kwarns(DBG_LV0, " {%d} warning! [%d:%s:%d] %s cost %u ms",
 				count, task->tgid, task->comm, task->pid, mngr->obj_name, cost_ms);
 			
 			if (dc)
@@ -605,8 +605,8 @@ static int dump_task(struct dump_mngr *mngr)
 
 	if (count) {
 		if (print_end_mark) {
-			kinfo(DBG_LV0, "dump %d task%s\n", count, (count == 1 ? "" : "s"));
-			kinfo(DBG_LV0, "--------------- [cpu%02d]   end to dump %s ---------------\n\n",
+			kinfos(DBG_LV0, " dump %d task%s\n", count, (count == 1 ? "" : "s"));
+			kinfos(DBG_LV0, "--------------- [cpu%02d]   end to dump %s ---------------\n\n",
 				smp_processor_id(), mngr->obj_name);
 		}
 	} else {
