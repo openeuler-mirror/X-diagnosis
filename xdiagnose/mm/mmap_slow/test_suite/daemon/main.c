@@ -1,13 +1,6 @@
 /*
-编译方式:
-gcc -o daemon main.c -lpthread -g
 
-第1个参数: g_sleep 		控制线程执行周期内睡眠时间单位是秒
-第2个参数: g_cpu_num 	控制创建线程个数
-
-测试程序的功能：
-配合 inject_rwsem_block 驱动一起使用，测试读写锁对 mmap 的影响。
-创建 g_cpu_num 个线程，线程执行 mmap/munmap/sleep 。
+测试读写锁对 mmap 的影响。
 
  */
 #define _GNU_SOURCE
