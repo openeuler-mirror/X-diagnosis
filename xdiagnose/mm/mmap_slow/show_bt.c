@@ -420,7 +420,7 @@ static int down_rwsem_trylock_acquired(struct kretprobe_instance *ri,
 	if (retval == 1) {
 		down_rwsem_done(mngr, data->sem, current, kp_name);
 	} else {
-		pr_info(LOG_PER_INFO "[%s] contention [%d:%s:%d] retval: %d\n",
+		pr_info(LOG_PER_INFO "[%s] contention [%d:%s:%d] retval: %lu\n",
 				kp_name, current->tgid, current->comm, current->pid, retval);
 	}
 	return 0;
@@ -463,7 +463,7 @@ static int down_rwsem_acquired_release(struct kprobe *p, struct pt_regs *regs, s
 	obj = mngr->obj + i;
 	hold_ms = NS_TO_MS(ktime_to_ns(ktime_sub(ktime_get(), obj->start)));
 	if (hold_ms > ttms) {
-		pr_warning(" warning! [%d:%s:%d] finally %s cost %d ms\n",
+		pr_warning(" warning! [%d:%s:%d] finally %s cost %u ms\n",
 				task->tgid, task->comm, task->pid, mngr->obj_name, hold_ms);
 	}
 
@@ -821,7 +821,7 @@ static int enter_do_exit(struct kprobe *p, struct pt_regs *regs)
 	if (-1 != i) {
 		if (current->pid == current->tgid) {
 			main_exit = 1;
-			pr_info(LOG_PER_INFO "[do_exit][%d:%s:%d] main exit(%u)\n",
+			pr_info(LOG_PER_INFO "[do_exit][%d:%s:%d] main exit(%ld)\n",
 					current->tgid, current->comm, current->pid, exit_code);
 
 			atomic_dec(MON_NUM_OF_FOUND());
@@ -833,7 +833,7 @@ static int enter_do_exit(struct kprobe *p, struct pt_regs *regs)
 
 			clear_dump_objs(current, 1);
 		} else {
-			pr_info(LOG_PER_INFO "[do_exit][%d:%s:%d] child exit(%u)\n",
+			pr_info(LOG_PER_INFO "[do_exit][%d:%s:%d] child exit(%ld)\n",
 					current->tgid, current->comm, current->pid, exit_code);
 		}
 	}
