@@ -50,7 +50,9 @@ static struct delayed_work dumptask_dw;
 static unsigned int ttms = 1000;
 module_param(ttms, uint, 0400);
 
+/* short for slow on panic */
 static unsigned int sop = 0;
+module_param(sop, uint, 0400);
 
 /* short for dump calltrace */
 static unsigned int dc = 1;
