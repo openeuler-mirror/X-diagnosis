@@ -564,6 +564,13 @@ def build_mpstat_param(func_parsers):
 	mpstat.add_argument("-i", type=str, dest="field", default="idle", choices=MpStat.choices, help="mpstat field")
 	mpstat.add_argument("-r", type=ratio_type, dest="ratio", default=99, help="cpu usage")
 
+def build_irq_cpu_param(func_parsers):
+	irq_cpu = func_parsers.add_parser(PROC_IRQ_CPU, help="show irq's cpu affinity")
+	irq_cpu.add_argument("-q", type=digit_list, dest="include", default=[], help="irq number list displayed")
+	irq_cpu.add_argument("-e", type=digit_list, dest="exclude", default=[], help="irq number list not displayed")
+	irq_cpu.add_argument("-n", type=count_type, dest="count", default=1, help="collect count")
+	irq_cpu.add_argument("-i", type=int_positive, dest="interval", default=1, help="time interval")
+
 if __name__=="__main__":
 	main_parser = argparse.ArgumentParser(description="Linux debug tool like swiss army knife")
 	sub_parsers = main_parser.add_subparsers(dest="file", help="proc-files")
@@ -573,6 +580,7 @@ if __name__=="__main__":
 	build_softirqs_param(sub_parsers)
 	build_btt_param(sub_parsers)
 	build_mpstat_param(sub_parsers)
+	build_irq_cpu_param(sub_parsers)
 
 	args = main_parser.parse_args()
 	FUNC[args.file](args)
