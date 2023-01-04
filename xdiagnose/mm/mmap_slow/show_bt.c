@@ -113,7 +113,6 @@ static struct dump_mngr mmfault_caller = {.obj_name = "mm fault", .is_dump = DUM
 
 static atomic_t mod_exiting = ATOMIC_INIT(0);
 
-#define LOG_PFX "[dbg] "
 #define kinfos(_level, fmt, ...)	({				\
 	if (debug) {							\
 		pr_info(LOG_PFX pr_fmt(fmt), ##__VA_ARGS__);}})
