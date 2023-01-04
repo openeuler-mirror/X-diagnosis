@@ -152,3 +152,69 @@ class IrqInfo:
 
 		# print("add record: {0}".format(record))
 		irqs_vec.append(record)
+
+	def comb_date_time(self, ts_b, ts_a):
+		b_date, b_time = ts_b.split()
+		a_date, a_time = ts_a.split()
+		if b_date == a_date:
+			return "{0} {1} to {2}".format(b_date, b_time, a_time)
+		else:
+			return "{0} {1} to {2} {3}".format(b_date, b_time, a_date, a_time)
+
+	def get_proc_irqs(self):
+		irqs_vec = []
+		timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+		with open(self.file, "r") as f:
+			lines = f.readlines()
+			for line in lines[1: ]:
+				line = line.strip("\n").split(":")
+				irq_desc = line[0].strip()
+				irq_cnt = line[1].split()
+				self.save_irq(irqs_vec, irq_desc, irq_cnt)
+
+		self.show_matrix(irqs_vec, timestamp, False)
+		return irqs_vec, timestamp
+	
+	def calc_diff(self, b, a, ts_b, ts_a):
+		result_vec = []
+		vec_len = len(b)
+		for i in range(vec_len):
+			line_b = b[i]
+			line_a = a[i]
+			cnt = len(line_b)
+			one_irq = []
+			for j in range(cnt - 1):
+				diff = int(line_a[j]) - int(line_b[j])
+				one_irq.append(str(diff))
+			one_irq.append(line_b[-1])
+			result_vec.append(one_irq)
+
+		timestamp = self.comb_date_time(ts_b, ts_a)
+		self.show_matrix(result_vec, timestamp, True)
+
+	def run(self):
+		before, after = [], []
+		ts_b, ts_a = "", ""
+
+		if self.count == 0:
+			before, ts_b = self.get_proc_irqs()
+			while True:
+				time.sleep(self.interval)
+				after, ts_a = self.get_proc_irqs()
+
+				self.calc_diff(before, after, ts_b, ts_a)
+				before = after
+				ts_b = ts_a
+		else:
+			before, ts_b = self.get_proc_irqs()
+			for i in range(self.count):
+				time.sleep(self.interval)
+				after, ts_a = self.get_proc_irqs()
+
+				self.calc_diff(before, after, ts_b, ts_a)
+				if i == self.count - 1:
+					break
+
+				before = after
+				ts_b = ts_a
+
