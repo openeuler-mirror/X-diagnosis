@@ -4,6 +4,8 @@
 #include <linux/version.h>
 #include <linux/workqueue.h>
 
+#define LOG_PFX		"[dbg]"
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 18, 0)
 #include <linux/sched/signal.h>
 #define OWNER_MASK 				(0xfffffffffffffffc)
@@ -59,10 +61,10 @@ int is_symbol_kprobe_support(const char *name)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 18, 0)  || LINUX_VERSION_CODE == KERNEL_VERSION(3, 10, 0)
 #define DUMP_QUEUE_DELAYED_WORK(dwork, delay)	queue_delayed_work(system_highpri_wq, (dwork), (delay))
 #define _UID_VALUE(cred)	(__kuid_val((cred)->uid))
-#define PRINT_ADDRESS(seq, addr)	printk(" {%d}    %pB\n", (seq), (addr))
+#define PRINT_ADDRESS(seq, addr)	printk(LOG_PFX " {%d}    %pB\n", (seq), (addr))
 #define dump_each_thread(j, p, t, dump_func)\
 	for_each_thread(p, t) {					\
-		printk(" {%d} [%d:%s:%d]\n", j, t->tgid, t->comm, t->pid);	\
+		printk(LOG_PFX " {%d} [%d:%s:%d]\n", j, t->tgid, t->comm, t->pid);	\
 		dump_func(t, j);					\
 		j++;								\
 	}
@@ -72,11 +74,11 @@ static void _unlock_trace(struct task_struct *task) { mutex_unlock(&task->signal
 #elif LINUX_VERSION_CODE == KERNEL_VERSION(2, 6, 32)
 #define DUMP_QUEUE_DELAYED_WORK(dwork, delay)	schedule_delayed_work((dwork), (delay))
 #define _UID_VALUE(cred)	((cred)->uid)
-#define PRINT_ADDRESS(seq, addr)	printk(" {%d}    %pS\n", (seq), (addr))
+#define PRINT_ADDRESS(seq, addr)	printk(LOG_PFX " {%d}    %pS\n", (seq), (addr))
 #define dump_each_thread(j, p, t, dump_func)\
 	t = p;									\
 	do {									\
-		printk(" {%d} [%d:%s:%d]\n", j, t->tgid, t->comm, t->pid);	\
+		printk(LOG_PFX " {%d} [%d:%s:%d]\n", j, t->tgid, t->comm, t->pid);	\
 		dump_func(t, j);					\
 		j++;								\
 	} while_each_thread(p, t)
