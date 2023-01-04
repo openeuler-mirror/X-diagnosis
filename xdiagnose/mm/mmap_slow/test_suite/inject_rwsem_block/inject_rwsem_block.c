@@ -12,7 +12,7 @@
 #include <linux/slab.h>
 #include <linux/delay.h>
 
-#define LOG_PFX		"======== [inject]"
+#define LOG_PFX		"======== [mmap_slow_inject]"
 
 static unsigned int lr = 0;
 
