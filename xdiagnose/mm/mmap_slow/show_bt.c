@@ -26,6 +26,8 @@
 
 #define DBG_LV0			(0x40000000)	/* default */
 #define DBG_LV1			(0x1)	/* 全局控制数据 */
+#define DBG_LV2			(0x2)	/* 读写锁相关 */
+#define DBG_LV3			(0x4)	/* workqueue */
 
 static char *proc[MAX_MONITOR_NUM];
 static int proc_num = 0;
@@ -248,10 +250,10 @@ static void fire_dmp_dw(struct task_struct *caller, const char *kp_name)
 	if (!delayed_work_pending(&dumptask_dw)) {
 		DUMP_QUEUE_DELAYED_WORK(&dumptask_dw, msecs_to_jiffies(dims));
 
-		kinfo(DBG_LV0, "[%s][%d:%s:%d] fire dwork\n",
+		kinfo(DBG_LV3, "[%s][%d:%s:%d] fire dwork\n",
 			kp_name, caller->tgid, caller->comm, caller->pid);
 	} else {
-		kinfo(DBG_LV0, "[%s][%d:%s:%d] dwork is pending\n",
+		kinfo(DBG_LV3, "[%s][%d:%s:%d] dwork is pending\n",
 			kp_name, caller->tgid, caller->comm, caller->pid);
 	}
 }
@@ -384,7 +386,7 @@ static int down_rwsem_done(struct dump_mngr *mngr,
 	/* add caller to dump objects */
 	i = get_dump_obj(mngr, NULL, caller);
 	if (-1 == i) {
-		kwarn(DBG_LV0, "[%s][%d:%s:%d] exceed limit(%d) not be dump\n",
+		kwarn(DBG_LV2, "[%s][%d:%s:%d] exceed limit(%d) not be dump\n",
 			obj_name, caller->tgid, caller->comm, caller->pid,
 			mngr->obj_cnt);
 		return 0;
@@ -459,7 +461,7 @@ static int down_rwsem_trylock_acquired(struct kretprobe_instance *ri,
 	if (retval == 1) {
 		down_rwsem_done(mngr, data->sem, current, kp_name);
 	} else {
-		kinfo(DBG_LV0, "[%s] contention [%d:%s:%d] retval: %lu\n",
+		kinfo(DBG_LV2, "[%s] contention [%d:%s:%d] retval: %lu\n",
 				kp_name, current->tgid, current->comm, current->pid, retval);
 	}
 	return 0;
@@ -497,7 +499,7 @@ static int down_rwsem_acquired_release(struct kprobe *p, struct pt_regs *regs, s
 	/* find current task */
 	i = get_dump_obj(mngr, task, task);
 	if (-1 == i) {
-		kwarn(DBG_LV0, "[%s][%d:%s:%d] not found in %s\n", symbol_name,
+		kwarn(DBG_LV2, "[%s][%d:%s:%d] not found in %s\n", symbol_name,
 			task->tgid, task->comm, task->pid, mngr->obj_name);
 		return 0;
 	}
@@ -610,7 +612,7 @@ static int dump_task(struct dump_mngr *mngr)
 				smp_processor_id(), mngr->obj_name);
 		}
 	} else {
-		kinfo(DBG_LV0, "[%s] %11s no task dumped in dwork\n",
+		kinfo(DBG_LV3, "[%s] %11s no task dumped in dwork\n",
 			__FUNCTION__, mngr->obj_name);
 	}
 out:
