@@ -52,7 +52,9 @@ module_param(ttms, uint, 0400);
 
 static unsigned int sop = 0;
 
+/* short for dump calltrace */
 static unsigned int dc = 1;
+module_param(dc, uint, 0400);
 
 static unsigned int debug = 0;
 
