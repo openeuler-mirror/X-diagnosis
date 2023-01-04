@@ -370,3 +370,28 @@ class MpStat:
 				return False
 
 		return True
+
+	def check_mpstat(self):
+		HEADER_PRINT = 1
+		line_no = 1
+		index = self.choices_dict[self.field]
+		# print("index: {0}".format(index))
+		with open(self.logfile) as f:
+			lines = f.readlines()
+			for line in lines:
+				line = line.strip('\n')
+				debug = "[notdata]"
+				if self.is_per_cpu_data(line) is True:
+					cpu_info = line.split()
+					debug = "[filter ]"
+					if float(cpu_info[index]) >= float(self.ratio):
+						if HEADER_PRINT == 1:
+							HEADER_PRINT = 0
+							print("%s" % (self.header))
+						debug = "[matched]"
+						print("%s" % (line.strip('\n')))
+				line_no += 1
+		
+	def run(self):
+		print("checking {0} which '{1}' field >= {2}%".format(self.logfile, self.field, self.ratio))
+		self.check_mpstat()
