@@ -64,6 +64,7 @@ static unsigned int dc = 1;
 module_param(dc, uint, 0400);
 
 static unsigned int debug = 0;
+module_param(debug, uint, 0400);
 
 static unsigned int dump_scope = DUMP_ALL;
 
