@@ -67,7 +67,7 @@ static unsigned int debug = 0;
 module_param(debug, uint, 0400);
 
 static unsigned int dump_scope = DUMP_ALL;
-
+module_param(dump_scope, uint, 0400);
 
 struct monitor_proc {
 	pid_t tgid;
