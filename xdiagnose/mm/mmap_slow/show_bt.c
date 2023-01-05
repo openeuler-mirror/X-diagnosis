@@ -32,6 +32,7 @@
 #define DBG_LV5			(0x10)	/* wait on rwsem */
 #define DBG_LV6			(0x20)	/* 进程退出 */
 #define DBG_LV7			(0x40)	/* dump obj */
+#define DBG_LV8			(0x80)	/* init log */
 
 static char *proc[MAX_MONITOR_NUM];
 static int proc_num = 0;
@@ -337,6 +338,7 @@ static void down_rwsem_acquire(struct kretprobe_instance *ri, struct pt_regs *re
 #ifdef CONFIG_ARM64
 	sem = (struct rw_semaphore *)regs->regs[0];
 #endif
+
 	data = (struct my_data *)ri->data;
 	data->sem = sem;
 	data->down_time = ktime_get();
@@ -504,6 +506,7 @@ static int down_rwsem_acquired_release(struct kprobe *p, struct pt_regs *regs, s
 #ifdef CONFIG_ARM64
 	sem = (struct rw_semaphore *)regs->regs[0];
 #endif
+
 	if (-1 == find_rwsem(sem))
 		return 0;
 
@@ -888,6 +891,7 @@ static int enter_do_exit(struct kprobe *p, struct pt_regs *regs)
 #ifdef CONFIG_ARM64
 	long exit_code = regs->regs[0];
 #endif
+
 	i = find_proc(current);
 	if (-1 != i) {
 		if (current->pid == current->tgid) {
@@ -920,61 +924,61 @@ static int enter_do_exit(struct kprobe *p, struct pt_regs *regs)
 static void unregister_kretprobe_down_read(void)
 {
 	unregister_kretprobe(&kretprobe_down_read);
-	kinfo(DBG_LV0, " unregistered %s\n", kretprobe_down_read.kp.symbol_name);
+	kinfo(DBG_LV8, " unregistered %s\n", kretprobe_down_read.kp.symbol_name);
 }
 
 static void unregister_kprobe_down_read_killable(void)
 {
 	unregister_kretprobe(&kretprobe_down_read_killable);
-	kinfo(DBG_LV0, " unregistered %s\n", kretprobe_down_read_killable.kp.symbol_name);
+	kinfo(DBG_LV8, " unregistered %s\n", kretprobe_down_read_killable.kp.symbol_name);
 }
 
 static void unregister_kretprobe_down_read_trylock(void)
 {
 	unregister_kretprobe(&kretprobe_down_read_trylock);
-	kinfo(DBG_LV0, " unregistered %s\n", kretprobe_down_read_trylock.kp.symbol_name);
+	kinfo(DBG_LV8, " unregistered %s\n", kretprobe_down_read_trylock.kp.symbol_name);
 }
 
 static void unregister_kprobe_up_read(void)
 {
 	unregister_kprobe(&kp_up_read);
-	kinfo(DBG_LV0, " unregistered %s\n", kp_up_read.symbol_name);
+	kinfo(DBG_LV8, " unregistered %s\n", kp_up_read.symbol_name);
 }
 
 static void unregister_kretprobe_down_write(void)
 {
 	unregister_kretprobe(&kretprobe_down_write);
-	kinfo(DBG_LV0, " unregistered %s\n", kretprobe_down_write.kp.symbol_name);
+	kinfo(DBG_LV8, " unregistered %s\n", kretprobe_down_write.kp.symbol_name);
 }
 
 static void unregister_kprobe_down_write_killable(void)
 {
 	unregister_kretprobe(&kretprobe_down_write_killable);
-	kinfo(DBG_LV0, " unregistered %s\n", kretprobe_down_write_killable.kp.symbol_name);
+	kinfo(DBG_LV8, " unregistered %s\n", kretprobe_down_write_killable.kp.symbol_name);
 }
 
 static void unregister_kretprobe_down_write_trylock(void)
 {
 	unregister_kretprobe(&kretprobe_down_write_trylock);
-	kinfo(DBG_LV0, " unregistered %s\n", kretprobe_down_write_trylock.kp.symbol_name);
+	kinfo(DBG_LV8, " unregistered %s\n", kretprobe_down_write_trylock.kp.symbol_name);
 }
 
 static void unregister_kprobe_up_write(void)
 {
 	unregister_kprobe(&kp_up_write);
-	kinfo(DBG_LV0, " unregistered %s\n", kp_up_write.symbol_name);
+	kinfo(DBG_LV8, " unregistered %s\n", kp_up_write.symbol_name);
 }
 
 static void unregister_kprobe_do_exit(void)
 {
 	unregister_kprobe(&kp_do_exit);
-	kinfo(DBG_LV0, " unregistered %s\n", kp_do_exit.symbol_name);
+	kinfo(DBG_LV8, " unregistered %s\n", kp_do_exit.symbol_name);
 }
 
 static void unregister_kretprobe_mmfault(void)
 {
 	unregister_kretprobe(&kretprobe_mmfault);
-	kinfo(DBG_LV0, " unregistered %s\n", kretprobe_mmfault.kp.symbol_name);
+	kinfo(DBG_LV8, " unregistered %s\n", kretprobe_mmfault.kp.symbol_name);
 }
 
 static int register_kp_readsem(void)
@@ -987,7 +991,7 @@ static int register_kp_readsem(void)
 		kerr(DBG_LV0, " kprobe failed: %s\n", kp_up_read.symbol_name);
 		goto out;
 	}
-	kinfo(DBG_LV0, " kprobe success: %s\n", kp_up_read.symbol_name);
+	kinfo(DBG_LV8, " kprobe success: %s\n", kp_up_read.symbol_name);
 
 	/* down_read */
 	ret = register_kretprobe(&kretprobe_down_read);
@@ -995,7 +999,7 @@ static int register_kp_readsem(void)
 		kerr(DBG_LV0, " kretprobe failed: %s\n", kretprobe_down_read.kp.symbol_name);
 		goto unreg_up_read;
 	}
-	kinfo(DBG_LV0, " kretprobe success: %s\n", kretprobe_down_read.kp.symbol_name);
+	kinfo(DBG_LV8, " kretprobe success: %s\n", kretprobe_down_read.kp.symbol_name);
 
 	/* down_read_trylock */
 	ret = register_kretprobe(&kretprobe_down_read_trylock);
@@ -1003,7 +1007,7 @@ static int register_kp_readsem(void)
 		kerr(DBG_LV0, " kretprobe failed: %s\n", kretprobe_down_read_trylock.kp.symbol_name);
 		goto unreg_down_read;
 	}
-	kinfo(DBG_LV0, " kretprobe success: %s\n", kretprobe_down_read_trylock.kp.symbol_name);
+	kinfo(DBG_LV8, " kretprobe success: %s\n", kretprobe_down_read_trylock.kp.symbol_name);
 
 	/* down_read_killable */
 	if (is_symbol_kprobe_support(kretprobe_down_read_killable.kp.symbol_name)) {
@@ -1012,7 +1016,7 @@ static int register_kp_readsem(void)
 			kerr(DBG_LV0, " kretprobe failed: %s\n", kretprobe_down_read_killable.kp.symbol_name);
 			goto unreg_down_read_trylock;
 		} else {
-			kinfo(DBG_LV0, " kretprobe success: %s\n", kretprobe_down_read_killable.kp.symbol_name);
+			kinfo(DBG_LV8, " kretprobe success: %s\n", kretprobe_down_read_killable.kp.symbol_name);
 		}
 	}
 
@@ -1038,7 +1042,7 @@ static int register_kp_writesem(void)
 		kerr(DBG_LV0, " kprobe failed: %s\n", kp_up_write.symbol_name);
 		goto out;
 	}
-	kinfo(DBG_LV0, " kprobe success: %s\n", kp_up_write.symbol_name);
+	kinfo(DBG_LV8, " kprobe success: %s\n", kp_up_write.symbol_name);
 
 	/* down_write */
 	ret = register_kretprobe(&kretprobe_down_write);
@@ -1046,7 +1050,7 @@ static int register_kp_writesem(void)
 		kerr(DBG_LV0, " kretprobe failed: %s\n", kretprobe_down_write.kp.symbol_name);
 		goto unreg_up_write;
 	}
-	kinfo(DBG_LV0, " kretprobe success: %s\n", kretprobe_down_write.kp.symbol_name);
+	kinfo(DBG_LV8, " kretprobe success: %s\n", kretprobe_down_write.kp.symbol_name);
 
 	/* down_write_trylock */
 	ret = register_kretprobe(&kretprobe_down_write_trylock);
@@ -1054,7 +1058,7 @@ static int register_kp_writesem(void)
 		kerr(DBG_LV0, " kretprobe failed: %s\n", kretprobe_down_write_trylock.kp.symbol_name);
 		goto unreg_down_write;
 	}
-	kinfo(DBG_LV0, " kretprobe success: %s\n", kretprobe_down_write_trylock.kp.symbol_name);
+	kinfo(DBG_LV8, " kretprobe success: %s\n", kretprobe_down_write_trylock.kp.symbol_name);
 
 	/* down_write_killable */
 	if (is_symbol_kprobe_support(kretprobe_down_write_killable.kp.symbol_name)) {
@@ -1063,7 +1067,7 @@ static int register_kp_writesem(void)
 			kerr(DBG_LV0, " kretprobe failed: %s\n", kretprobe_down_write_killable.kp.symbol_name);
 			goto unreg_down_write_trylock;
 		} else {
-			kinfo(DBG_LV0, " kretprobe success: %s\n", kretprobe_down_write_killable.kp.symbol_name);
+			kinfo(DBG_LV8, " kretprobe success: %s\n", kretprobe_down_write_killable.kp.symbol_name);
 		}
 	}
 
@@ -1113,7 +1117,7 @@ static int register_kp(void)
 		kerr(DBG_LV0, " kprobe failed: %s\n", kp_do_exit.symbol_name);
 		goto out;
 	}
-	kinfo(DBG_LV0, " kprobe success: %s\n", kp_do_exit.symbol_name);
+	kinfo(DBG_LV8, " kprobe success: %s\n", kp_do_exit.symbol_name);
 
 	/* handle_mm_fault */
 	ret = register_kretprobe(&kretprobe_mmfault);
@@ -1121,7 +1125,7 @@ static int register_kp(void)
 		kerr(DBG_LV0, " kretprobe failed: %s\n", kretprobe_mmfault.kp.symbol_name);
 		goto unreg_do_exit;
 	}
-	kinfo(" kretprobe success: %s\n", kretprobe_mmfault.kp.symbol_name);
+	kinfo(DBG_LV8, " kretprobe success: %s\n", kretprobe_mmfault.kp.symbol_name);
 
 	return 0;
 
@@ -1326,7 +1330,7 @@ static void init_monitor_table(const int insmod)
 	}
 
 	if (insmod) {
-		kinfo(DBG_LV0, "[%s] task monitor: 0x%lx. size: %lu (%lu*%d)\n",
+		kinfo(DBG_LV8, "[%s] task monitor: 0x%lx. size: %lu (%lu*%d)\n",
 			__FUNCTION__, (unsigned long)&mon,
 			sizeof(mon), sizeof(struct monitor_proc), MAX_MONITOR_NUM);
 	}
@@ -1337,7 +1341,7 @@ static int alloc_dump_obj(struct dump_mngr *mngr, int obj_cnt)
 {
 	unsigned long alloc_size;
 	mngr->is_dump = dump_scope & mngr->is_dump;
-	kinfo(DBG_LV0, "[%s] %11s mngr: 0x%lx %s\n",
+	kinfo(DBG_LV8, "[%s] %11s mngr: 0x%lx %s\n",
 			__FUNCTION__, mngr->obj_name,
 			(unsigned long)mngr, mngr->is_dump ? "" : "(not set)");
 	if (!mngr->is_dump) {
@@ -1350,7 +1354,7 @@ static int alloc_dump_obj(struct dump_mngr *mngr, int obj_cnt)
 	if (mngr->obj)
 		init_dump_manager(mngr);
 
-	kinfo(DBG_LV0, "[%s] %11s  obj: 0x%lx, size: %lu (%ld*%d)\n",
+	kinfo(DBG_LV8, "[%s] %11s  obj: 0x%lx, size: %lu (%ld*%d)\n",
 			__FUNCTION__, mngr->obj_name, (unsigned long)mngr->obj,
 			alloc_size, sizeof(struct dump_object), mngr->obj_cnt);
 	return (mngr->obj ? 1 : 0);
@@ -1387,7 +1391,7 @@ static int __init show_bt_init(void)
 	int ret = 0;
 
 	debug |= (DBG_LV0 | DBG_LV1);
-	kinfo(DBG_LV0, "[%s] begin\n", __FUNCTION__);
+	kinfo(DBG_LV8, "[%s] begin\n", __FUNCTION__);
 
 	ret = check_parameters();
 	if (ret != 0)
@@ -1396,6 +1400,7 @@ static int __init show_bt_init(void)
 	ret = init_data();
 	if (ret != 0)
 		goto out;
+
 	/* 注册之前要确保探测点使用的数据已经初始化好 */
 	ret = register_kp();
 	if (ret != 0)
