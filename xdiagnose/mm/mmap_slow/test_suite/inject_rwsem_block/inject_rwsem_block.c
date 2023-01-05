@@ -1,7 +1,9 @@
 /*
-	故障注入工具。配合 daemon 用户态测试程序一起使用。
-	遍历系统所有进程，找到 daemon 进程，获取其 mm->mmap_sem 锁。注入指定 ns（秒）读或者写锁持有时间，然后再释放。
- */
+    inject_rwsem_block:
+    Fault injection tool. Used with the daemon user-mode test program.
+    Iterate through all processes in the system, find the daemon process, and acquire its mm->mmap_sem lock. Injects a specified ns (seconds) read or write lock holding time before it is released.Fault injection tool. 
+
+*/
 
 #include <linux/kernel.h>
 #include <linux/module.h>
