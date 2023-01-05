@@ -34,7 +34,6 @@
 #define DBG_LV7			(0x40)	/* dump obj */
 #define DBG_LV8			(0x80)	/* init log */
 
-/* the process name */
 static char *proc[MAX_MONITOR_NUM];
 static int proc_num = 0;
 module_param_array(proc, charp, &proc_num, 0400);
