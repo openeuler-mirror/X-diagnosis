@@ -458,8 +458,8 @@ static int down_write_trylock_acquire(struct kretprobe_instance *ri, struct pt_r
 }
 
 static int down_rwsem_trylock_acquired(struct kretprobe_instance *ri,
-										  struct pt_regs *regs,
-										  struct dump_mngr *mngr)
+				       struct pt_regs *regs,
+				       struct dump_mngr *mngr)
 {
 	unsigned long retval;
 	struct my_data *data = (struct my_data *)ri->data;
