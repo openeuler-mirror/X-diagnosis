@@ -1126,6 +1126,9 @@ static uid_t _uid(struct task_struct *task)
 	return _UID_VALUE(cred);
 }
 
+/*
+ * return 1 all monitor processes have been found, else return 0
+ */
 static int if_all_procs_found(const int tell_miss)
 {
 	static int print_all_found = 1;
@@ -1315,6 +1318,7 @@ static void init_monitor_table(const int insmod)
 	}
 }
 
+/* return 1 success, else 0 failed */
 static int alloc_dump_obj(struct dump_mngr *mngr, int obj_cnt)
 {
 	unsigned long alloc_size;
