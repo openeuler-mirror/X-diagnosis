@@ -64,6 +64,7 @@ static void dr_drtry_ur(void)
 	char *comm = current->comm;
 	pid_t tgid = current->tgid;
 	int ret;
+	/* wakeup delay_rwsem_unlock in dms seconds */
 	schedule_delayed_work(&rwsem_unlock_dw, msecs_to_jiffies(dms));
 	
 	down_read(g_sem);
@@ -94,6 +95,7 @@ static void dw_drtry_uw(void)
 	char *comm = current->comm;
 	pid_t tgid = current->tgid;
 	int ret;
+	/* wakeup delay_rwsem_unlock in dms seconds */
 	schedule_delayed_work(&rwsem_unlock_dw, msecs_to_jiffies(dms));
 
 	down_write(g_sem);
@@ -160,6 +162,7 @@ static int find_task(void)
 	int ret = 0;
 
 	rcu_read_lock();
+	/* check each process to match "proc" */
 	for_each_process(p) {
 		if (0 == strcmp(p->comm, proc)) {
 			pr_info(LOG_PFX"[cpu%d][%s][%5d] task found\n", smp_processor_id(), p->comm, p->tgid);
