@@ -375,6 +375,9 @@ static inline int get_dump_obj(struct dump_mngr *mngr,
 	return -1;
 }
 
+/*
+ * now the rw_semaphore has been hold by task, we record the task info for dump later.
+ */
 static int down_rwsem_done(struct dump_mngr *mngr,
 						   struct rw_semaphore *sem,
 						   struct task_struct *caller,
@@ -480,6 +483,9 @@ static int down_write_trylock_acquired(struct kretprobe_instance *ri, struct pt_
 	return 0;
 }
 
+/*
+ * 不支持跟踪 A 线程 down_rwsem，B 线程 up_rwsem 的场景
+ */
 static int down_rwsem_acquired_release(struct kprobe *p, struct pt_regs *regs, struct dump_mngr *mngr)
 {
 	int i;
@@ -644,7 +650,7 @@ static int dump_tasks(void)
 			dump_each_thread(j, p, t, do_task_dumpstack);
 			put_task_struct(p);
 			kinfo(DBG_LV0, "---------------- [cpu%02d]  end  to dump[%d][%d:%s:%d] ----------------\n\n",
-					smp_processor_id(), n, p->tgid, p->comm, p->pid);
+				smp_processor_id(), n, p->tgid, p->comm, p->pid);
 			n++;
 		}
 		rcu_read_unlock();
@@ -708,7 +714,7 @@ static int rmv_task_from(struct dump_mngr *mngr,
 
 	if (!mngr->is_dump)
 		return 0;
-
+	/* find current task */
 	i = get_dump_obj(mngr, task, task);
 	if (-1 == i) {
 		kwarn(DBG_LV0, "[%s][%d:%s:%d] not found in %s\n", kp_name,
@@ -1200,7 +1206,7 @@ static void do_find_monitor_process(void)
 
 static void rwsem_fmp_dwork(void)
 {
-
+	/* avoid unnecessary find after all monitor tasks found */
 	if (if_all_procs_found(0))
 		goto fire;
 
@@ -1382,11 +1388,12 @@ static int __init show_bt_init(void)
 	ret = init_data();
 	if (ret != 0)
 		goto out;
-
+	/* 注册之前要确保探测点使用的数据已经初始化好 */
 	ret = register_kp();
 	if (ret != 0)
 		goto out;
 
+	/* 现在可以开始搜索监控进程了 */
 	INIT_DELAYED_WORK(&fmp_dw, find_monitor_proc_dwork);
 	INIT_DELAYED_WORK(&dumptask_dw, dump_task_dwork);
 	schedule_delayed_work(&fmp_dw, 0);
