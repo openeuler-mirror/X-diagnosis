@@ -30,6 +30,8 @@
 #define DBG_LV3			(0x4)	/* workqueue */
 #define DBG_LV4			(0x8)	/* mm_fault */
 #define DBG_LV5			(0x10)	/* wait on rwsem */
+#define DBG_LV6			(0x20)	/* 进程退出 */
+#define DBG_LV7			(0x40)	/* dump obj */
 
 static char *proc[MAX_MONITOR_NUM];
 static int proc_num = 0;
@@ -290,13 +292,13 @@ static void show_dump_obj(struct dump_mngr *mngr)
 	struct dump_object *obj;
 
 	if (!mngr->is_dump) {
-		kinfo(DBG_LV0, "[%s] %s dump is off. dump_scope: 0x%x\n",
+		kinfo(DBG_LV7, "[%s] %s dump is off. dump_scope: 0x%x\n",
 				__FUNCTION__, mngr->obj_name, dump_scope);
 		return;
 	}
 
 	obj_cnt = mngr->obj_cnt;
-	kinfo(DBG_LV0, "[%s] %s has %d objs (0x%lx)\n",
+	kinfo(DBG_LV7, "[%s] %s has %d objs (0x%lx)\n",
 			__FUNCTION__, mngr->obj_name, obj_cnt, (unsigned long)mngr->obj);
 
 	for (i = 0; i < obj_cnt; i++) {
@@ -306,11 +308,11 @@ static void show_dump_obj(struct dump_mngr *mngr)
 		spin_lock(&obj->lock);
 		o = obj->caller;
 		if (o) {
-			kinfo(DBG_LV0, "[%s] obj[%d][%d:%s:%d] tsk_sem: 0x%lx\n",
+			kinfo(DBG_LV7, "[%s] obj[%d][%d:%s:%d] tsk_sem: 0x%lx\n",
 				__FUNCTION__, i, o->tgid, o->comm, o->pid,
 				(unsigned long)obj->tsk_sem);
 		} else {
-			kinfo(DBG_LV0, "[%s] obj[%d] caller: 0x%lx, tsk_sem: 0x%lx\n",
+			kinfo(DBG_LV7, "[%s] obj[%d] caller: 0x%lx, tsk_sem: 0x%lx\n",
 				__FUNCTION__, i,
 				(unsigned long)obj->caller, (unsigned long)obj->tsk_sem);
 		}
@@ -834,13 +836,13 @@ static void clear_dump_obj(struct dump_mngr *mngr,
 		spin_lock(&obj->lock);
 		if (tsk && tsk == obj->caller) {
 			clear = 1;
-			kinfo(DBG_LV0, "[%s by tsk] %s obj[%d][%d:%s:%d] tsk_sem: 0x%lx\n",
+			kinfo(DBG_LV7, "[%s by tsk] %s obj[%d][%d:%s:%d] tsk_sem: 0x%lx\n",
 				__FUNCTION__, mngr->obj_name, i, tsk->tgid, tsk->comm, tsk->pid,
 				(unsigned long)obj->tsk_sem);
 		}
 		if (!clear && (sem && sem == obj->tsk_sem)) {
 			clear = 1;
-			kinfo(DBG_LV0, "[%s by sem] %s obj[%d][%d:%s:%d] tsk_sem: 0x%lx\n",
+			kinfo(DBG_LV7, "[%s by sem] %s obj[%d][%d:%s:%d] tsk_sem: 0x%lx\n",
 				__FUNCTION__, mngr->obj_name, i, cur->tgid, cur->comm, cur->pid,
 				(unsigned long)sem);
 		}
@@ -902,7 +904,7 @@ static int enter_do_exit(struct kprobe *p, struct pt_regs *regs)
 
 			clear_dump_objs(current, 1);
 		} else {
-			kinfo(DBG_LV0, "[do_exit][%d:%s:%d] child exit(%ld)\n",
+			kinfo(DBG_LV6, "[do_exit][%d:%s:%d] child exit(%ld)\n",
 					current->tgid, current->comm, current->pid, exit_code);
 		}
 	}
@@ -1150,7 +1152,7 @@ static int if_all_procs_found(const int tell_miss)
 			found_num++;
 		} else {
 			if (tell_miss)
-				kinfo(DBG_LV0, " not found [%d] %s(%d)\n", i, comm[i], uid[i]);
+				kinfo(DBG_LV6, " not found [%d] %s(%d)\n", i, comm[i], uid[i]);
 		}
 		spin_unlock(MON_TASK_LOCK(i));
 	}
@@ -1172,6 +1174,7 @@ static int if_all_procs_found(const int tell_miss)
 static void do_find_monitor_process(void)
 {
 	int i = 0;
+	int lv;
 	struct task_struct *p;
 	char *state = "found";
 
@@ -1188,14 +1191,16 @@ static void do_find_monitor_process(void)
 					spin_lock(MON_TASK_LOCK(i));
 					if (0 != MON_TASK_TGID(i)) {
 						state = "saved";
+						lv = DBG_LV6;
 					} else {
 						MON_TASK_TGID(i) = p->tgid;
 						MON_TASK_SEM(i) = (p->mm ? &(p->mm->mmap_sem) : NULL);
 						state = "found";
+						lv = DBG_LV0;
 					}
 					spin_unlock(MON_TASK_LOCK(i));
 					put_task_struct(p);
-					kinfo(DBG_LV0, " %s [%d][%d:%s](%d) %s task(sem: 0x%lx)\n",
+					kinfo(lv, " %s [%d][%d:%s](%d) %s task(sem: 0x%lx)\n",
 							state, i, MON_TASK_TGID(i), comm[i], uid[i],
 							(p->mm ? "user" : "kernel"), (unsigned long)MON_TASK_SEM(i));
 					break;
