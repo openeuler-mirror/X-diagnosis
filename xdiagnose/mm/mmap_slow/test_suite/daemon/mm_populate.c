@@ -99,13 +99,13 @@ static void do_mmap(int cpu)
         printf("[%3d][%6d:%6d] shm_open failed. %s\n",
 				cpu, getpid(), gettid(), strerror(errno));
         exit(1);
-    }
+        }
 
 	if (ftruncate(fd, MAP_SIZE) < 0) {
         printf("[%3d][%6d:%6d] ftruncate failed. %s\n",
 				cpu, getpid(), gettid(), strerror(errno));
         exit(1);
-    }
+        }
 
 	if (g_act & ACT_POP)
 		flags = MAP_POPULATE;
@@ -137,7 +137,7 @@ static void do_mmap(int cpu)
 		if (mlock(pmap, MAP_SIZE))
 			printf("[%3d][%6d:%6d] mlock failed. %s\n",
 					cpu, getpid(), gettid(), strerror(errno));
-    }
+        }
 
 	gettimeofday(&s3, NULL);
 	
@@ -195,7 +195,7 @@ static void *thread_fn(void *arg)
 
 static void create_threads(void)
 {
-	const int NUM_THREADS=4;
+	const int NUM_THREADS = 4;
 	int i, rc;
 	int cpu_num;
 	pthread_t t;
