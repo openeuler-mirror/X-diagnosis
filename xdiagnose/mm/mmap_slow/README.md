@@ -13,7 +13,7 @@ showbt 驱动用来定位内核维护的用户态进程的 struct rw_semaphore �
 比如，监控uid=1234用户的user_app进程。
 
 ## 【加载命令】
-
+监控多个进程时，comm和uid的内容必现按照顺序匹配，即：comm="p1","p2","p3" uid=uid1,uid2,uid3
 
 ```
 insmod showbt.ko comm="java" uid=2201 dims=500
@@ -21,8 +21,8 @@ insmod showbt.ko comm="java" uid=2201 dims=500
 
 ## 【参数说明】
 
-comm: 进程名
-uid:  进程的uid
+comm: 进程名, 查看方式请见【使用方法】 
+uid:  进程的uid, 查看方式请见【使用方法】
 
 dims: dump interval ms, 默认1秒。根据该值周期性打印可疑线程信息和内核态调用栈。此值设置太小可能会冲日志，设置太大可能会抓不到，请结合实际表现设置经验值。
 
