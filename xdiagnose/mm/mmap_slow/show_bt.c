@@ -39,10 +39,12 @@ static char *proc[MAX_MONITOR_NUM];
 static int proc_num = 0;
 module_param_array(proc, charp, &proc_num, 0400);
 
+/* the process name  */
 static char *comm[MAX_MONITOR_NUM];
 static int comm_num = 0;
 module_param_array(comm, charp, &comm_num, 0400);
 
+/* the uid of process */
 static unsigned int uid[MAX_MONITOR_NUM];
 static unsigned int uid_num = 0;
 module_param_array(uid, uint, &uid_num, 0400);
