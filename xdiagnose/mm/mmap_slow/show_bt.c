@@ -28,6 +28,8 @@
 #define DBG_LV1			(0x1)	/* 全局控制数据 */
 #define DBG_LV2			(0x2)	/* 读写锁相关 */
 #define DBG_LV3			(0x4)	/* workqueue */
+#define DBG_LV4			(0x8)	/* mm_fault */
+#define DBG_LV5			(0x10)	/* wait on rwsem */
 
 static char *proc[MAX_MONITOR_NUM];
 static int proc_num = 0;
@@ -415,7 +417,7 @@ static void down_rwsem_acquired(struct kretprobe_instance *ri, struct dump_mngr 
 	wait_rwsem_ms = NS_TO_MS(ktime_to_ns(ktime_sub(ktime_get(), data->down_time)));
 	/* 长时间等锁的task（受害者） */
 	if (wait_rwsem_ms > ttms) {
-		kwarn(DBG_LV0, "[%d:%s:%d] wait on %s for %u ms\n",
+		kwarn(DBG_LV5, "[%d:%s:%d] wait on %s for %u ms\n",
 			current->tgid, current->comm, current->pid,
 			kp_name, wait_rwsem_ms);
 	}
@@ -690,7 +692,7 @@ static void add_task_to(struct dump_mngr *mngr,
 	/* add caller to dump objects */
 	i = get_dump_obj(mngr, NULL, caller);
 	if (-1 == i) {
-		kwarn(DBG_LV0, "[%s][%d:%s:%d] exceed limit(%d) not be dump\n",
+		kwarn(DBG_LV4, "[%s][%d:%s:%d] exceed limit(%d) not be dump\n",
 			mngr->obj_name, caller->tgid, caller->comm, caller->pid,
 			mngr->obj_cnt);
 		return;
@@ -714,10 +716,11 @@ static int rmv_task_from(struct dump_mngr *mngr,
 
 	if (!mngr->is_dump)
 		return 0;
+
 	/* find current task */
 	i = get_dump_obj(mngr, task, task);
 	if (-1 == i) {
-		kwarn(DBG_LV0, "[%s][%d:%s:%d] not found in %s\n", kp_name,
+		kwarn(DBG_LV4, "[%s][%d:%s:%d] not found in %s\n", kp_name,
 			task->tgid, task->comm, task->pid, mngr->obj_name);
 		return 0;
 	}
