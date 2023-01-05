@@ -47,7 +47,8 @@ static void delay_rwsem_unlock(struct work_struct *work)
 	pr_info(LOG_PFX"[cpu%d][%s][%5d] enter\n", smp_processor_id(), comm, tgid);
 	if (g_sem) {
 		down_read(g_sem);
-		pr_info(LOG_PFX"[cpu%d][%s][%5d] down_read done (sem: 0x%lx)\n", smp_processor_id(), comm, tgid, (unsigned long)g_sem);
+		pr_info(LOG_PFX"[cpu%d][%s][%5d] down_read done (sem: 0x%lx)\n", 
+		        smp_processor_id(), comm, tgid, (unsigned long)g_sem);
 		msleep(5000);
 		up_read(g_sem);
 		pr_info(LOG_PFX"[cpu%d][%s][%5d] up_read done\n", smp_processor_id(), comm, tgid);
@@ -68,7 +69,8 @@ static void dr_drtry_ur(void)
 	schedule_delayed_work(&rwsem_unlock_dw, msecs_to_jiffies(dms));
 	
 	down_read(g_sem);
-	pr_info(LOG_PFX"[cpu%d][%s][%5d] down_read done (sem: 0x%lx)\n", smp_processor_id(), comm, tgid, (unsigned long)g_sem);
+	pr_info(LOG_PFX"[cpu%d][%s][%5d] down_read done (sem: 0x%lx)\n", 
+	        smp_processor_id(), comm, tgid, (unsigned long)g_sem);
 
 	pr_info(LOG_PFX"[cpu%d][%s][%5d] down_read_trylock\n", smp_processor_id(), comm, tgid);
 	ret = down_read_trylock(g_sem);
@@ -83,7 +85,8 @@ static void dr_drtry_ur(void)
 	/* !!! should call one more up_read for down_read_trylock */
 	if (urm && ret) {
 		up_read(g_sem);
-		pr_info(LOG_PFX"[cpu%d][%s][%5d] up_read for down_read_trylock\n", smp_processor_id(), comm, tgid);
+		pr_info(LOG_PFX"[cpu%d][%s][%5d] up_read for down_read_trylock\n", 
+		        smp_processor_id(), comm, tgid);
 	}
 	up_read(g_sem);
 	pr_info(LOG_PFX"[cpu%d][%s][%5d] up_read done\n", smp_processor_id(), comm, tgid);
@@ -99,7 +102,8 @@ static void dw_drtry_uw(void)
 	schedule_delayed_work(&rwsem_unlock_dw, msecs_to_jiffies(dms));
 
 	down_write(g_sem);
-	pr_info(LOG_PFX"[cpu%d][%s][%5d] down_write done (sem: 0x%lx)\n", smp_processor_id(), comm, tgid, (unsigned long)g_sem);
+	pr_info(LOG_PFX"[cpu%d][%s][%5d] down_write done (sem: 0x%lx)\n", 
+	        smp_processor_id(), comm, tgid, (unsigned long)g_sem);
 
 	pr_info(LOG_PFX"[cpu%d][%s][%5d] down_read_trylock\n", smp_processor_id(), comm, tgid);
 	ret = down_read_trylock(g_sem);
@@ -124,14 +128,16 @@ static void loop_rsem(void)
 
 	for (i = 0; i < lr; i++) {
 		down_read(g_sem);
-		pr_info(LOG_PFX"[cpu%d][%s][%5d] down_read done(%d) (sem: 0x%lx)\n", smp_processor_id(), comm, tgid, i, (unsigned long)g_sem);
+		pr_info(LOG_PFX"[cpu%d][%s][%5d] down_read done(%d) (sem: 0x%lx)\n", 
+		        smp_processor_id(), comm, tgid, i, (unsigned long)g_sem);
 	}
 	
 	msleep(20000);
 	
 	for (i = 0; i < lr; i++) {
 		up_read(g_sem);
-		pr_info(LOG_PFX"[cpu%d][%s][%5d]  up_read  done(%d) (sem: 0x%lx)\n", smp_processor_id(), comm, tgid, i, (unsigned long)g_sem);
+		pr_info(LOG_PFX"[cpu%d][%s][%5d]  up_read  done(%d) (sem: 0x%lx)\n", 
+		        smp_processor_id(), comm, tgid, i, (unsigned long)g_sem);
 		msleep(2000);
 	}
 }
@@ -149,9 +155,11 @@ static void run_test_case(void)
 			} else {
 				dw_drtry_uw();
 			}
-			pr_info(LOG_PFX"[cpu%d][%s][%5d] will msleep 10000 ms\n", smp_processor_id(), current->comm, current->tgid);
+			pr_info(LOG_PFX"[cpu%d][%s][%5d] will msleep 10000 ms\n", 
+			        smp_processor_id(), current->comm, current->tgid);
 			msleep(10000);
-			pr_info(LOG_PFX"[cpu%d][%s][%5d] run_test_case done\n", smp_processor_id(), current->comm, current->tgid);	
+			pr_info(LOG_PFX"[cpu%d][%s][%5d] run_test_case done\n", 
+			        smp_processor_id(), current->comm, current->tgid);	
 		}
 	}
 }
@@ -165,7 +173,8 @@ static int find_task(void)
 	/* check each process to match "proc" */
 	for_each_process(p) {
 		if (0 == strcmp(p->comm, proc)) {
-			pr_info(LOG_PFX"[cpu%d][%s][%5d] task found\n", smp_processor_id(), p->comm, p->tgid);
+			pr_info(LOG_PFX"[cpu%d][%s][%5d] task found\n", 
+			        smp_processor_id(), p->comm, p->tgid);
 			g_sem = &p->mm->mmap_sem;
 			goto out;
 		}
