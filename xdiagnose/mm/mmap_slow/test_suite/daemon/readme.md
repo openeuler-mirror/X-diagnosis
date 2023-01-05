@@ -12,7 +12,7 @@
 	创建 g_cpu_num 个线程，线程执行 mmap/munmap/sleep 。
 
 ##mm_populate
-
+        按照以下指令执行后，查看tracepoint日志：
 	echo 'p:enter_mm_populate __mm_populate start=%di len=%si' > /sys/kernel/debug/tracing/kprobe_events
 	echo 'r:leave_mm_populate __mm_populate $retval' >> /sys/kernel/debug/tracing/kprobe_events
 	echo 'p:enter_get_user_pages __get_user_pages start=%dx nr_pages=%cx' >> /sys/kernel/debug/tracing/kprobe_events
