@@ -23,6 +23,7 @@ module_param(ns, uint, 0400);
 #define DR		(0x1)
 #define DR_TRY	(DR | 0x2)
 static unsigned int ro = 0;
+module_param(ro, uint, 0400);
 
 static unsigned int urm = 1;
 module_param(urm, uint, 0400);
