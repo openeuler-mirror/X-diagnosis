@@ -32,7 +32,10 @@ sop: 默认是0。如果设置为1，当检测到长时间卡且达到 ttms 阈�
 
 ## 【编译方法】
 
-执行 make 即可。
+```
+cd xdiagnose/mm/mmap_slow
+make
+```
 
 ## 【实现依赖】
 
