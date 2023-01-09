@@ -25,6 +25,7 @@ rpm -ivh xdiagnose-1.x-x.rpm
 * xd_scsiiocount
 * xd_scsiiotrace
 * xd_ext4fsstat
+* xd_iolatency
 
 ### 1.0 xdiag
 ```shell
@@ -375,3 +376,33 @@ EXAMPLES:
 注：进程模式下，多进程对同一有写入场景下，显示的writeback数据为文件写入总数据
     非该单进程写入总数据.
 ####
+
+### 1.7 xd_iolatency
+
+```shell
+USAGE: xd_iolatency [--help] [-d device] [-i ISSUE] [-T times] [-t time]
+
+EXAMPLES:
+    xd_iolatency		# Trace device I/O latency
+    xd_iolatency -d sdb		# Trace the sdb only
+    xd_iolatency -t 10    	# Trace the time
+    xd_iolatency -i D2C		# Trace the D2C issue only
+
+  -c, --clean			Clean the history data
+  -d, --device=DEVICE		Trace the disk only
+  -i, --issue=ISSUE		Trace the issue (Q2G,Q2M,G2M,G2I,I2D,D2C)
+  -m, --milliseconds		Millisecond histogram
+  -t, --time=TIME		Trace the I/O latency time
+  -T, --times=TIMES		Trace the I/O latency times
+  -?, --help			Give this help list
+      --usage			Give a short usage message
+```
+#### 功能：
+#### -c,--clean
+#### -d,--device=DEVICE
+#### -i,--issue=ISSUE
+#### -m,--milliseconds
+#### -t,--time=TIME
+#### -T,--times=TIMES
+
+
