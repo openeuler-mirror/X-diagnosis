@@ -182,7 +182,7 @@ static int libbpf_print_fn(enum libbpf_print_level level,
 static bool tracepoint_exist(const char *base, const char *event)
 {
 	char path[PATH_LEN];
-	char *traceing_dir = "/sys/kernel/debug/tracing/evnets";
+	char *traceing_dir = "/sys/kernel/debug/tracing/events";
 
 	snprintf(path, sizeof(path), "%s/%s/%s/format", traceing_dir,
 		 base, event);
