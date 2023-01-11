@@ -330,13 +330,13 @@ EXAMPLES:
 USAGE: xd_ext4fstat [--help] [-t times] [-i interval] [-s SORT] [-o opcode]
 
 EXAMPLES:
-    xd_ext4fsstat#Trace file read/write stat for ext4 filesystem
-    xd_ext4fsstat -i 10#printf 10 second summaries
-    xd_ext4fsstat -m /mnt/test#Trace the special mount point for ext4 filesystem.
-    xd_ext4fsstat -s r#Sort the read bytes
-    xd_ext4fsstat -o r#Trace read only, default read and wriete
-    xd_ext4fsstat -t 5#Trace 5 times
-    xd_ext4fsstat -v p#show the pid view
+    xd_ext4fsstat		#Trace file read/write stat for ext4 filesystem
+    xd_ext4fsstat -i 10		#printf 10 second summaries
+    xd_ext4fsstat -m /mnt/test	#Trace the special mount point for ext4 filesystem.
+    xd_ext4fsstat -s r		#Sort the read bytes
+    xd_ext4fsstat -o r		#Trace read only, default read and wriete
+    xd_ext4fsstat -t 5		#Trace 5 times
+    xd_ext4fsstat -v p		#show the pid view
 
   -c, --clean                Clean the trace data
   -C, --clear                Clear the screen
@@ -377,7 +377,7 @@ EXAMPLES:
     非该单进程写入总数据.
 ####
 
-### 1.7 xd_iolatency
+### 1.8 xd_iolatency
 
 ```shell
 USAGE: xd_iolatency [--help] [-d device] [-i ISSUE] [-T times] [-t time]
@@ -398,11 +398,17 @@ EXAMPLES:
       --usage			Give a short usage message
 ```
 #### 功能：
+用于跟踪block设备的IO时延情况
 #### -c,--clean
+每个周期统计完数据后，历史数据将被清空，重新统计，默认是累积.
 #### -d,--device=DEVICE
+指定需要监控的设备
 #### -i,--issue=ISSUE
+指定需要监控IO时延阶段（Q2G,Q2M,G2M,G2I,I2D,D2C）
 #### -m,--milliseconds
+显示为时延单位为毫秒，默认为微妙.
 #### -t,--time=TIME
+监控时长，单位秒.
 #### -T,--times=TIMES
-
+监控的次数. 次数达到后，则结束本次监控.
 
