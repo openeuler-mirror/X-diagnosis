@@ -1,14 +1,17 @@
-//SPDX-License-Identifier: (GPL-2.0)
-
-/*
- * Copyright (c) 2022 Huawei Inc.
- *
- * xd_scsiiotrace: Trace scsi cmnd for scsi device 
- *
- * History:
- *      15-Sep-2022 Wu Bo <wubo40@huawei.com> created.
- */
-
+/******************************************************************************
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022. All rights reserved.
+ * xd-scsiiotrace licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ * http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+ * PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ * Author: wubo
+ * Create: 2022-09-15
+ * Description: Trace scsi cmnd for scsi device.
+ * ****************************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -34,20 +37,25 @@ static volatile bool running = true;
 #define CDB_BUFFER_LEN	(256)
 #define SDEV_NAME_LEN	(16)
 
-enum scsi_disposition {
-	SCSI_MLQUEUE_HOST_BUSY		= 0x1055,
-	SCSI_MLQUEUE_DEVICE_BUSY	= 0x1056,
-	SCSI_MLQUEUE_EH_RETRY		= 0x1057,
-	SCSI_MLQUEUE_TARGET_BUSY	= 0x1058,
-	NEEDS_RETRY			= 0x2001,
-	SUCCESS				= 0x2002,
-	FAILED				= 0x2003,
-	QUEUED				= 0x2004,
-	SOFT_ERROR			= 0x2005,
-	ADD_TO_MLQUEUE			= 0x2006,
-	TIMEOUT_ERROR			= 0x2007,
-	SCSI_RETURN_NOT_HANDLED		= 0x2008,
-	FAST_IO_FAIL			= 0x2009,
+struct scsi_disposition_s {
+	int value;
+	char name[32];
+};
+
+struct scsi_disposition_s  scsi_disposition_table[] = {
+	{SCSI_MLQUEUE_HOST_BUSY, "HOST_BUSY"},
+	{SCSI_MLQUEUE_DEVICE_BUSY, "DEVICE_BUSY"},
+	{SCSI_MLQUEUE_EH_BUSY, "EH_BUSY"},
+	{SCSI_MLQUEUE_TARGET_BUSY, "TARGET_BUSY"},
+	{SCSI_NEEDS_RETRY, "NEEDS_RETRY"},
+	{SCSI_SUCCESS, "SUCCESS"},
+	{SCSI_FAILED, "FAILED"},
+	{SCSI_QUEUED, "QUEUED"},
+	{SCSI_SOFT_ERROR, "SOFT_ERROR"},
+	{SCSI_ADD_TO_MLQUEUE, "ADD_TO_MLQUEUE"},
+	{SCSI_TIMEOUT_ERROR, "TIMEOUT_ERROR"},
+	{SCSI_RETURN_NOT_HANDLED, "NOT_HANDELED"},
+	{SCSI_FAST_IO_FAIL, "FAST_TO_FAIL"},
 };
 
 /* part of code copy from the linux kernel */
@@ -123,16 +131,86 @@ static const char * cdb_byte0_names[] = {
 
 unsigned int cdb_name_array_size =  ARRAY_SIZE(cdb_byte0_names);
 
-static const char * const hostbyte_table[]={
-"DID_OK", "DID_NO_CONNECT", "DID_BUS_BUSY", "DID_TIME_OUT", "DID_BAD_TARGET",
-"DID_ABORT", "DID_PARITY", "DID_ERROR", "DID_RESET", "DID_BAD_INTR",
-"DID_PASSTHROUGH", "DID_SOFT_ERROR", "DID_IMM_RETRY", "DID_REQUEUE",
-"DID_TRANSPORT_DISRUPTED", "DID_TRANSPORT_FAILFAST", "DID_TARGET_FAILURE",
-"DID_NEXUS_FAILURE", "DID_ALLOC_FAILURE", "DID_MEDIUM_ERROR" };
+struct scsi_result_s {
+	char name[48];
+};
 
-static const char * const driverbyte_table[]={
-"DRIVER_OK", "DRIVER_BUSY", "DRIVER_SOFT",  "DRIVER_MEDIA", "DRIVER_ERROR",
-"DRIVER_INVALID", "DRIVER_TIMEOUT", "DRIVER_HARD", "DRIVER_SENSE"};
+struct scsi_result_s hostbyte_table[] = {
+	[0x0] = {"DID_OK"},
+	[0x1] = {"DID_NO_CONNECT"},
+	[0x2] = {"DID_BUS_BUSY"},
+	[0x3] = {"DID_TIME_OUT"},
+	[0x4] = {"DID_BAD_TARGET"},
+	[0x5] = {"DID_ABORT"},
+	[0x6] = {"DID_PARITY"},
+	[0x7] = {"DID_ERROR"},
+	[0x8] = {"DID_RESET"},
+	[0x9] = {"DID_BAD_INTR"},
+	[0xa] = {"DID_PASSTHROUGH"},
+	[0xb] = {"DID_SOFT_ERROR"},
+	[0xc] = {"DID_IMM_RETRY"},
+	[0xd] = {"DID_REQUEUE"},
+	[0xe] = {"DID_TRANSPORT_DISRUPTED"},
+	[0xf] = {"DID_TRANSPORT_FAILFAST"},
+	[0x10] = {"DID_TARGET_FAILURE"},
+	[0x11] = {"DID_NEXUS_FAILURE"},
+	[0x12] = {"DID_ALLOC_FAILURE"},
+	[0x13] = {"DID_MEDIUM_ERROR"},
+};
+
+struct scsi_result_s driverbyte_table[]={
+	[0x1] = {"DRIVER_OK"},
+	[0x2] = {"DRIVER_BUSY"},
+	[0x3] = {"DRIVER_SOFT"},
+	[0x4] = {"DRIVER_MEDIA"},
+	[0x5] = {"DRIVER_ERROR"},
+	[0x6] = {"DRIVER_INVALID"},
+	[0x7] = {"DRIVER_TIMEOUT"},
+	[0x8] = {"DRIVER_HARD"},
+	[0x9] = {"DRIVER_SENSE"}
+};
+
+struct scsi_result_s msgbyte_table[] = {
+	[0x0] = {"COMMAND_COMPLETE"},
+	[0x1] = {"EXTENDED_MESSAGE"},
+	[0x2] = {"SAVE_POINTERS"},
+	[0x3] = {"RESTOBE_POINTERS"},
+	[0x4] = {"DISCONNECT"},
+	[0x5] = {"INITIATOR_ERROR"},
+	[0x6] = {"ABORT_TASK_SET"},
+	[0x7] = {"MESSAGE_REJECT"},
+	[0x8] = {"NOP"},
+	[0x9] = {"MSG_PARITY_ERROR"},
+	[0xa] = {"LINKED_CMD_COMPLETE"},
+	[0xb] = {"LINKED_FLG_CMD_COMPLETE"},
+	[0xc] = {"TARGET_RESET"},
+	[0xd] = {"ABORT_TASK"},
+	[0xe] = {"CLEAR_TASK_SET"},
+	[0xf] = {"RELEASE_RECOVERY"},
+	[0x10] = {"RELEASE_RECOVERY"},
+	[0x16] = {"CLEAR_ACA"},
+	[0x17] = {"LOGICAL_UNIT_RESET"},
+	[0x20] = {"SIMPLE_QUEUE_TAG"},
+	[0x21] = {"HEAD_OF_QUEUE_TAG"},
+	[0x22] = {"ORDERED_QUEUE_TAG"},
+	[0x23] = {"IGNORE_WIDE_RESIDE"},
+	[0x24] = {"ACA"},
+	[0x55] = {"QAS_REQUEST"},
+};
+
+struct scsi_result_s statusbyte_table[] = {
+	[0x0] = {"SAM_STAT_GOOD"},
+	[0x2] = {"SAM_STAT_CHECK_CONDITION"},
+	[0x4] = {"SAM_STAT_CONDITION_MET"},
+	[0x8] = {"SAM_STAT_BUSY"},
+	[0x10] = {"SAM_STAT_INTERMEDIATE"},
+	[0x14] = {"SAM_STAT_INTERMEDIATE_CONDITION_MET"},
+	[0x18] = {"SAM_STAT_RESERVATION_CONFLICT"},
+	[0x22] = {"SAM_STAT_COMMAND_TERMINATED"},
+	[0x28] = {"SAM_STAT_TASK_SET_FULL"},
+	[0x30] = {"SAM_STAT_ACA_ACTIVE"},
+	[0x40] = {"SAM_STAT_TASK_ABORTED"},
+};
 
 /*
  *  Use these to separate status msg and our bytes
@@ -151,44 +229,76 @@ static const char * const driverbyte_table[]={
 
 const char *scsi_hostbyte_string(int result)
 {
-        const char *hb_string = NULL;
+        const char *hb_string = "undefine";
         int hb = host_byte(result);
 
         if (hb < ARRAY_SIZE(hostbyte_table))
-                hb_string = hostbyte_table[hb];
+                hb_string = hostbyte_table[hb].name;
 	return hb_string;
 }
 
 const char *scsi_driverbyte_string(int result)
 {
-        const char *db_string = NULL;
+        const char *db_string = "undefine";
         int db = driver_byte(result);
 
         if (db < ARRAY_SIZE(driverbyte_table))
-                db_string = driverbyte_table[db];
+                db_string = driverbyte_table[db].name;
         return db_string;
 }
 
-#define STR_NEEDS_RETRY		"NEEDS_RETRY"
-#define STR_SUCCESS		"SUCCESS"
-#define STR_FAILED		"FAILED"
-#define STR_QUEUED		"QUEUED"
-#define STR_SOFT_ERROR		"SOFT_ERROR"
-#define STR_ADD_TO_MLQUEUE	"ADD_TO_MLQUEUE"
-#define STR_TIMEOUT_ERROR	"TIMEOUT_ERROR"
-#define STR_FAST_IO_FAIL	"FAST_IO_FAIL"
-#define STR_SCSI_RETURN_NOT_HANDLED "SCSI_RETURN_NOT_HANDLED"
-#define STR_UNKNOWN		"UNKNOWN"
+const char *scsi_msgbyte_string(int result)
+{
+        const char *db_string = "undefine";
+        int db = msg_byte(result);
+
+        if (db < ARRAY_SIZE(msgbyte_table))
+                db_string = strlen(msgbyte_table[db].name)
+			    ? msgbyte_table[db].name
+			    : "undefine";
+        return db_string;
+}
+
+const char *scsi_statusbyte_string(int result)
+{
+        const char *db_string = "undefine";
+        int db = status_byte(result);
+
+        if (db < ARRAY_SIZE(statusbyte_table))
+                db_string = strlen(statusbyte_table[db].name)
+			    ? statusbyte_table[db].name
+			    : "undefine";
+        return db_string;
+}
+
+static char *get_return_string(int value)
+{
+	int i;
+	int size = ARRAY_SIZE(scsi_disposition_table);
+
+	for (i = 0; i < size; i++) {
+		if (scsi_disposition_table[i].value == value)
+			return scsi_disposition_table[i].name;
+	}
+
+	return "undefine";
+}
 
 static struct env {
 	char *disk;
-	bool filter_error;
+	bool filter_event;
+	int event;
+	bool filter_opcode;
+	int opcode;
 	struct scsi_sdev sdev;
+	bool filter_result;
 	int parse_result;
 	bool is_parse_result;
 } env = {
+	.filter_event = false,
+	.filter_result = false,
+	.filter_opcode = false,
 	.is_parse_result = false,
-	.filter_error = false,
 	.sdev.host = -1,
 	.sdev.channel = -1,
 	.sdev.id = -1,
@@ -199,21 +309,47 @@ static struct env {
 const char argp_program_doc[] =
 "Trace scsi device scsi cmnd result.\n"
 "\n"
-"USAGE: xd_scsiiotrace [--help] [-d h:c:t:l] [-E]\n"
+"USAGE: xd_scsiiotrace [--help] [-d h:c:t:l] [-o opcode]\n"
 "\n"
 "EXAMPLES:\n"
 "    xd_scsiiotrace               	# Report all scsi cmnd result\n"
-"    xd_scsiiotrace -E   		# Report error/timeout scsi cmnd result\n"
 "    xd_scsiiotrace -p 0x8000002	# Parse the scsi cmnd result.\n"
 "    xd_scsiiotrace -d 0:0:0:1   	# Trace the scsi device only.\n";
 
 static const struct argp_option opts[] = {
 	{ "device", 'd', "h:c:t:l",  0, "Trace this scsi device only" },
-	{ "error", 'E', NULL, 0, "Trace error/timeout scsi cmnd. (default trace all scsi cmnd)" },
-	{ "parse", 'p', "result",  0, "Parse the scsi cmnd result.(format hex)" },
+	{ "event", 'e', "EVENT",  0, "Trace event for scsi cmnd(start, error, timeout, done)" },
+	{ "parse", 'p', "RESULT",  0, "Parse the scsi cmnd result.(format hex)" },
+	{ "opcode", 'o', "OPCODE",  0, "Trace specical scsi cmnd" },
+	{ "result", 'r', NULL,  0, "Trace the result > 0 scsi cmnd" },
 	{ NULL, 'h', NULL, OPTION_HIDDEN, "Show the full help" },
 	{},
 };
+
+struct ioevent_table_s {
+	const char *name;
+	enum ioevent value;
+} ioevent_table[] = {
+	{"start", IO_START},
+	{"done", IO_DONE},
+	{"error", IO_ERROR},
+	{"timeout", IO_TIMEOUT},
+};
+
+static int parse_filter_event(char *arg, int *event)
+{
+	int i;
+	int max_event = ARRAY_SIZE(ioevent_table);
+
+	for (i = 0; i < max_event; i++) {
+		if (!strcmp(ioevent_table[i].name, arg)) {
+			*event = ioevent_table[i].value;
+			return 0;
+		}
+	}
+
+	return 1;
+}
 
 static error_t parse_arg(int key, char *arg, struct argp_state *state)
 {
@@ -221,8 +357,18 @@ static error_t parse_arg(int key, char *arg, struct argp_state *state)
 	case 'h':
 		argp_state_help(state, stderr, ARGP_HELP_STD_HELP);
 		break;
-	case 'E':
-		env.filter_error = true;
+	case 'e':
+		if (parse_filter_event(arg, &env.event) != 0) {
+			argp_usage(state);
+		}
+		env.filter_event = true;
+		break;
+	case 'r':
+		env.filter_result = true;
+		break;
+	case 'o':
+		env.opcode = strtol(arg, NULL, 16);
+		env.filter_opcode = true;
 		break;
 	case 'p':
 		if (arg) {
@@ -238,7 +384,7 @@ static error_t parse_arg(int key, char *arg, struct argp_state *state)
 			fprintf(stderr, "invaild disk name: too long\n");
 			argp_usage(state);
 		}
-		sscanf(env.disk, "%d:%d:%d:%ld", &env.sdev.host,
+		sscanf(env.disk, "%d:%d:%d:%d", &env.sdev.host,
 			&env.sdev.channel, &env.sdev.id, &env.sdev.lun);
 		break;
 	default:
@@ -280,39 +426,21 @@ static int parse_scsi_cmnd_result(int result)
 	int hostbyte = host_byte(result);
 	int driverbyte = driver_byte(result);
 
-	printf("Parte scsi cmnd result:\n");
-	printf("	hostbyte=0x%-2x %s\n", hostbyte, 
-			scsi_hostbyte_string(result));
-	printf("	driverbyte=0x%-2x %s\n", driverbyte,
-			scsi_driverbyte_string(result));
-	printf("	msgbyte=0x%-2x\n", msgbyte);
-	printf("	statusbyte=0x%-2x\n", statusbyte);
+	printf("\n %s\n", "status: ((result>>1) & 0x7f)");
+	printf(" %s\n", "msg: ((result>>8) & 0xff)");
+	printf(" %s\n", "host: ((result>>16) & 0xff)");
+	printf(" %s\n\n", "driver: ((result>>24) & 0xff)");
+	printf(" Parte scsi cmnd result:\n");
+	printf("%-6s %-12s 0x%-8x %-16s\n", " ", "driverbyte:",
+			driverbyte, scsi_driverbyte_string(result));
+	printf("%-6s %-12s 0x%-8x %-16s\n", " ", "hostbyte:",
+			hostbyte, scsi_hostbyte_string(result));
+	printf("%-6s %-12s 0x%-8x %-16s\n", " ", "msgbyte:",
+			msgbyte, scsi_msgbyte_string(result));
+	printf("%-6s %-12s 0x%-8x %-16s\n", " ", "statusbyte:",
+			statusbyte, scsi_statusbyte_string(result));
 
 	return 0;
-}
-
-static char *gitdisposition_descrp(int disposition)
-{
-	switch (disposition) {
-	case SUCCESS:
-		return STR_SUCCESS;
-	case NEEDS_RETRY:
-		return STR_NEEDS_RETRY;
-	case FAILED:
-		return STR_FAILED;
-	case ADD_TO_MLQUEUE:
-		return STR_ADD_TO_MLQUEUE;
-	case TIMEOUT_ERROR:
-		return STR_TIMEOUT_ERROR;
-	case FAST_IO_FAIL:
-		return STR_FAST_IO_FAIL;
-	case SOFT_ERROR:
-		return STR_SOFT_ERROR;
-	case QUEUED:
-		return STR_QUEUED;
-	default:
-		return STR_UNKNOWN;
-	}
 }
 
 static void scsi_format_cdb_log(const struct event *e,
@@ -347,38 +475,59 @@ void handle_event(void *ctx, int cpu, void *data, unsigned int data_sz)
 	char cdb_buffer[CDB_BUFFER_LEN];
 
 	scsi_format_cdb_log(e, cdb_buffer, CDB_BUFFER_LEN);
-	printf("[%d:%d:%d:%ld] %-6s 0x%-14x 0x%-10x %-16s %-32s\n",
+	printf("[%d:%d:%d:%d] %-6s %-4d %-7lld %-20.8f %-8s 0x%-10x %-14s %-32s\n",
 		e->sdev.host, e->sdev.channel, e->sdev.id, e->sdev.lun,
-		" ", e->driver_result, e->scsi_result, 
-		gitdisposition_descrp(e->disposition), cdb_buffer);
+		" ", e->cpuid, e->ioseq, e->timestamp / 1000000.0,
+		ioevent_table[e->ioevent].name, e->result,
+		get_return_string(e->rtn), cdb_buffer);
 }
 
 static void print_header()
 {
-	printf("%-16s %-16s %-12s %-16s %-32s\n",
-		"DEVICE", "DRIVER_RESULT", "SCSI_RESULT", "DISPOSION", "SCSI_CMD");
+	printf("%-16s %-4s %-7s %-20s %-8s %-12s %-14s %-32s\n",
+		"DEVICE", "CPU", "SEQ", "TIMESTAMP", "EVENT", "RESULT",
+		"DISPOSITION", "SCSI_CMD");
+}
+
+static void handle_lost_event(void *ctx, int cpu, __u64 lost_cnt)
+{
+	printf("Lost %llu events on cpu #%d\n", lost_cnt, cpu);
 }
 
 static void set_filter_rule(struct xd_scsiiotrace_bpf *skel, struct env *env)
 {
 	unsigned int enable = 1;
-	unsigned int feature = 1;
-	int result_fd = bpf_map__fd(skel->maps.filter_result);
-	int sdev_fd = bpf_map__fd(skel->maps.filter_sdev);
+	struct filter_rule filter_value = {};
+	int filter_fd = bpf_map__fd(skel->maps.filter_rule_map);
+	int sdev_fd = bpf_map__fd(skel->maps.filter_sdev_map);
 
-	if (env->filter_error && result_fd > 0) {
-		bpf_map_update_elem(result_fd, &enable, &feature, BPF_ANY);
+	filter_value.flag = 0;
+	if (env->filter_event) {
+		filter_value.flag |= FILTER_IOEVENT;
+		filter_value.ioevent = env->event;
+	}
+
+	if (env->filter_opcode) {
+		filter_value.flag |= FILTER_OPCODE;
+		filter_value.opcode = env->opcode;
+	}
+
+	if (env->filter_result)
+		filter_value.flag |= FILTER_RESULT;
+
+	if (filter_value.flag && filter_fd > 0) {
+		bpf_map_update_elem(filter_fd, &enable, &filter_value, 0);
 	}
 
 	if (env->disk && sdev_fd > 0) {
-		bpf_map_update_elem(sdev_fd, &enable, &env->sdev, BPF_ANY);
+		bpf_map_update_elem(sdev_fd, &enable, &env->sdev, 0);
 	}
+
 }
 
 int main(int argc, char **argv)
 {
 	struct perf_buffer *pb = NULL;
-        struct perf_buffer_opts pb_opts = {};
 	struct xd_scsiiotrace_bpf *skel;
 	int err;
 
@@ -416,9 +565,10 @@ int main(int argc, char **argv)
 		goto cleanup;
 	}
 
-	pb_opts.sample_cb = handle_event;
 	pb = perf_buffer__new(bpf_map__fd(skel->maps.events),
-					8/* 32KB per CPU */, &pb_opts);
+					8/* 32KB per CPU */,
+					handle_event, handle_lost_event,
+					NULL, NULL);
 	if (libbpf_get_error(pb)) {
 		err = -1;
 		fprintf(stderr, "Failed to create perf buffer\n");
