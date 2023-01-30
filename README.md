@@ -26,6 +26,7 @@ rpm -ivh xdiagnose-1.x-x.rpm
 * xd_scsiiotrace
 * xd_ext4fsstat
 * xd_iolatency
+* xd_rtnlcheck
 
 ### 1.0 xdiag
 ```shell
@@ -411,4 +412,13 @@ EXAMPLES:
 监控时长，单位秒.
 #### -T,--times=TIMES
 监控的次数. 次数达到后，则结束本次监控.
+
+### 1.9 xd_rtnlcheck
+```shell
+USAGE xd_rtnlcheck （无参数）
+
+EXAMPLE:  xd_rtnlcheck    #Check rtnl_mutex's owner
+```
+### 功能：
+用于检测当前是否有进程持有rtnl_mutex锁，如果有则输出其pid和comm.
 
