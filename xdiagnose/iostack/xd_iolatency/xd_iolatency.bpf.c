@@ -218,7 +218,13 @@ SEC("tracepoint/block/block_bio_queue")
 int bpf__block_bio_queue(struct io_ctx *ctx)
 {
 	struct io_struct key = {};
+	struct feature_key fkey = {.enable = 1};
+	struct feature_value *valuep = NULL;
 	u64 ts = bpf_ktime_get_ns();
+
+	valuep = bpf_map_lookup_elem(&feature_map, &fkey);
+	if (valuep && filter_dev(ctx, valuep))
+		return 0;
 
 	create_io_key(ctx, &key);
 	bpf_map_update_elem(&io_map, &key, &ts, 0);
