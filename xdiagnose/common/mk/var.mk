@@ -1,5 +1,5 @@
 ROOT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-BPFTOOL ?= $(ROOT_DIR)/../../common/bpftools/bpftool
+BPFTOOL ?= bpftool
 CLANG ?= clang                                      
 LLVM_STRIP ?= llvm-strip
 LIBEBPF_BASE ?= /usr/lib64

@@ -1,7 +1,7 @@
 #!/bin/bash
 PRJ_DIR=$(dirname $(readlink -f "$0"))
 
-TOOLS_DIR=${PRJ_DIR}/xdiagnose/common/bpftools
+BPFTOOL=/usr/sbin/bpftool
 SRC_DIR=${PRJ_DIR}/xdiagnose
 VMLINUX_DIR=${SRC_DIR}/common/include
 VMLINUX_H=${VMLINUX_DIR}/vmlinux.h
@@ -9,7 +9,7 @@ VMLINUX_H=${VMLINUX_DIR}/vmlinux.h
 function print_help()
 {
 	echo "Usage: $0 OPERATOR OPTIONS"
-    echo "OPERATOR: "
+	echo "OPERATOR: "
 	echo "	-i build and install"
 	echo "	-b build"
 	echo "	-c clean"
@@ -18,38 +18,49 @@ function print_help()
 
 function clean()
 {
-    cd ${SRC_DIR}
-    make clean
+	cd ${SRC_DIR}
+	make clean
+}
+
+function check_env()
+{
+	[ ! -f $BPFTOOL ] && {
+		echo "bpftool is not install, please install it first"
+		exit 1
+	}
+
+	kernel_debuginfo=`rpm -q kernel-debuginfo`
+	[ $? != 0 ] && {
+		echo "kernel-debuginfo is not install, please install it first"
+		exit 1
+	}
+	
 }
 
 function build()
 {
-    echo ${PRJ_DIR}
-	cd ${TOOLS_DIR}
-	ARCH=$(uname -m)
-	[ ! -f "bpftool" ] && {
-		ln -s bpftool_${ARCH} bpftool
-		chmod 755 bpftool
-	}
+	check_env
 
 	[ ! -f ${VMLINUX_H} ]&& {
-		echo "go to gen vmlinux.h"
+		echo "go to generate vmlinux.h"
+		debugversion=`rpm -q --qf '%{version}-%{release}.%{arch}' kernel-debuginfo`
+		vmlinux="/usr/lib/debug/lib/modules/$debugversion/vmlinux"
 		[ ! -d ${VMLINUX_DIR} ]&& {
 			mkdir -p ${VMLINUX_DIR}
 		}
-		./bpftool btf dump file ${1:-/sys/kernel/btf/vmlinux} format c > ${VMLINUX_H}
+		bpftool btf dump file ${vmlinux} format c > ${VMLINUX_H}
 	}
-	echo ${SRC_DIR}
-	cd ${SRC_DIR}
+
 	echo "start compile"
+	cd ${SRC_DIR}
 	make
 }
 
 function install()                                                     
 {
-    cd ${SRC_DIR}
-    export DESTDIR=$1
-    make install
+	cd ${SRC_DIR}
+	export DESTDIR=$1
+	make install
 }
 
 [ "$1" == "-c" ] && {
