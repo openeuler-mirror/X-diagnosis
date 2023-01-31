@@ -502,11 +502,6 @@ static void set_filter_rule(struct xd_scsiiotrace_bpf *skel, struct env *env)
 	int sdev_fd = bpf_map__fd(skel->maps.filter_sdev_map);
 
 	filter_value.flag = 0;
-	if (env->filter_event) {
-		filter_value.flag |= FILTER_IOEVENT;
-		filter_value.ioevent = env->event;
-	}
-
 	if (env->filter_opcode) {
 		filter_value.flag |= FILTER_OPCODE;
 		filter_value.opcode = env->opcode;
@@ -523,6 +518,45 @@ static void set_filter_rule(struct xd_scsiiotrace_bpf *skel, struct env *env)
 		bpf_map_update_elem(sdev_fd, &enable, &env->sdev, 0);
 	}
 
+}
+
+static int xd_scsiiotrace_bpf_progs_attach(struct xd_scsiiotrace_bpf *skel)
+{
+	int err = 0;
+
+	if (!env.filter_event)
+		return xd_scsiiotrace_bpf__attach(skel);
+
+	switch (env.event) {
+	case IO_START:
+		skel->links.bpf__scsi_dispatch_cmd_start =
+			bpf_program__attach(skel->progs.bpf__scsi_dispatch_cmd_start);
+		if (!skel->links.bpf__scsi_dispatch_cmd_start)
+			err = -errno;
+		break;
+	case IO_DONE:
+		skel->links.bpf__scsi_dispatch_cmd_done =
+			bpf_program__attach(skel->progs.bpf__scsi_dispatch_cmd_done);
+		if (!skel->links.bpf__scsi_dispatch_cmd_done)
+			err = -errno;
+		break;
+	case IO_ERROR:
+		skel->links.bpf__scsi_dispatch_cmd_error =
+			bpf_program__attach(skel->progs.bpf__scsi_dispatch_cmd_error);
+		if (!skel->links.bpf__scsi_dispatch_cmd_error)
+			err = -errno;
+		break;
+	case IO_TIMEOUT:
+		skel->links.bpf__scsi_dispatch_cmd_timeout =
+			bpf_program__attach(skel->progs.bpf__scsi_dispatch_cmd_timeout);
+		if (!skel->links.bpf__scsi_dispatch_cmd_timeout)
+			err = -errno;
+		break;
+	default:
+		break;
+	}
+
+	return err;
 }
 
 int main(int argc, char **argv)
@@ -559,7 +593,7 @@ int main(int argc, char **argv)
 
 	set_filter_rule(skel, &env);
 
-	err = xd_scsiiotrace_bpf__attach(skel);
+	err = xd_scsiiotrace_bpf_progs_attach(skel);
 	if (err) {
 		fprintf(stderr, "Failed to attach BPF skeleton\n");
 		goto cleanup;

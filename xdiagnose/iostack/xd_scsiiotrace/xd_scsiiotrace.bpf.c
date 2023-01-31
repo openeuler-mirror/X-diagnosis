@@ -107,10 +107,6 @@ static bool filter_check(struct event *e)
 	if (!value)
 		return 0;
 
-	if (value->flag & FILTER_IOEVENT &&
-	    e->ioevent != value->ioevent)
-		return 1;
-
 	if (value->flag & FILTER_OPCODE &&
 	    e->opcode != value->opcode)
 		return 1;

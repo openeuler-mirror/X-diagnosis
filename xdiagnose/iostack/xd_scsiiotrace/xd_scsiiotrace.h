@@ -30,13 +30,11 @@ enum ioevent {
 	IO_TIMEOUT,
 };
 
-#define FILTER_IOEVENT		0x1
-#define FILTER_OPCODE		0x2
-#define FILTER_RESULT		0x4
+#define FILTER_OPCODE		0x1
+#define FILTER_RESULT		0x2
 
 struct filter_rule {
 	int flag;
-	int ioevent;
 	int opcode;
 };
 
