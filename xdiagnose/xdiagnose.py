@@ -39,8 +39,6 @@ def main():
         args = parser.parse_args()
         if args.inspect:
             inspector = Inspector()
-            inspector.reg_net_module()
-            inspector.reg_common_module()
             inspector.start_inspect()
 
         if args.module in modules:

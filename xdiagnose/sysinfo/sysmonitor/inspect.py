@@ -1,5 +1,7 @@
 # coding: utf-8
+import os
 import threading
+from configparser import ConfigParser
 
 from xdiagnose.utils.config import config
 
@@ -17,37 +19,44 @@ from .net.log_bond4_check import LogBond4Check
 class Inspector(object):
     def __init__(self):
         self.timer = None
-        self.modules = []
         self.interval = config.getint('inspect', 'Interval') or 3
+        self.configfile = os.path.join(os.path.dirname(__file__), 'sysmonitor.conf')
+        self.modules = {'cpucheck'      : [LogCpu(),True],
+                        'commoncheck'   : [LogCommonCheck(),True],
+                        'conntrackcheck': [LogConntrack(),True],
+                        'qdisccheck'    : [LogQdisc(),True],
+                        'snmpcheck'     : [LogProc('cat /proc/net/snmp'),True],
+                        'netstatcheck'  : [LogProc('cat /proc/net/netstat'),True],
+                        'sockstatcheck' : [LogSockstat(),True],
+                        'sockstat6check': [LogSockstat('cat /proc/net/sockstat6'),True],
+                        'netcheck'      : [LogNetCheck(),True],
+                        'niccheck'      : [LogNicCheck(),True],
+                        'bond4check'    : [LogBond4Check(),True]}
 
-    def reg_module(self, mod):
-        self.modules.append(mod)
+    def reg_modules(self):
+        sysconfig = ConfigParser()
+        sysconfig.read(self.configfile)
+        modulelist = sysconfig['modules']
+        for iterm in modulelist:
+            if iterm in self.modules and sysconfig['modules'][iterm] == 'off':
+                self.modules[iterm][1] = False
 
-    def reg_net_module(self, *args, **kwargs):
-        self.reg_module(LogConntrack())
-        self.reg_module(LogQdisc())
-        self.reg_module(LogProc('cat /proc/net/snmp'))
-        self.reg_module(LogProc('cat /proc/net/netstat'))
-        self.reg_module(LogSockstat())
-        self.reg_module(LogSockstat('cat /proc/net/sockstat6'))
-        self.reg_module(LogNetCheck())
-        self.reg_module(LogNicCheck())
-        self.reg_module(LogBond4Check())
-
-    def reg_common_module(self, *args, **kwargs):
-        self.reg_module(LogCpu())
-        self.reg_module(LogCommonCheck())
-
-    def start_inspect(self):
+    def start_inspecttimer(self):
         self.timer = threading.Timer(self.interval, self.do_inspection)
         self.timer.start()
+
+    def do_inspection(self):
+        for mod in self.modules:
+            if self.modules[mod][1] == True:
+                self.modules[mod][0].do_action()
+        self.start_inspecttimer()
+
+    def start_inspect(self):
+        self.reg_modules()
+        self.start_inspecttimer()
 
     def stop_inspect(self):
         if self.timer:
             self.timer.cancel()
             self.timer = None
 
-    def do_inspection(self):
-        for mod in self.modules:
-            mod.do_action()
-        self.start_inspect()
