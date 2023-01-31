@@ -57,7 +57,7 @@ class LogSockstat(object):
                 thresh = s.group().split()
                 self.sysctl['ip6frag_high_thresh'] = int(thresh[2])
 
-    def get_diff(self):
+    def get_diff_value(self):
         self.diff = {}
 
         if not self.old_stats:
@@ -92,14 +92,14 @@ class LogSockstat(object):
                      if old_elems[j] != new_elems[j] and j - 1 >= 0 and \
                          old_elems[j].isdigit() and new_elems[j].isdigit():
                          stats_name = proto + '_' + new_elems[j - 1]
-                         self.diff[stats_name] = int(new_elems[j]) - int(old_elems[j])
+                         self.diff[stats_name] = int(new_elems[j])
         finally:
             self.old_stats = stats[1]
 
         return self.diff
 
     def do_action(self):
-        sock_stats = self.get_diff()
+        sock_stats = self.get_diff_value()
         for k, v in sock_stats.items():
             if k in self.log:
                 if k == 'TCP_mem' and v > self.sysctl['tcp_mem'][2] - 10:
