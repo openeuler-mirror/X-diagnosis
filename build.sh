@@ -1,10 +1,11 @@
 #!/bin/bash
 PRJ_DIR=$(dirname $(readlink -f "$0"))
-
+PAHOLE=/usr/bin/pahole
 BPFTOOL=/usr/sbin/bpftool
 SRC_DIR=${PRJ_DIR}/xdiagnose
 VMLINUX_DIR=${SRC_DIR}/common/include
 VMLINUX_H=${VMLINUX_DIR}/vmlinux.h
+VMLINUX=""
 
 function print_help()
 {
@@ -29,12 +30,23 @@ function check_env()
 		exit 1
 	}
 
+	[ ! -f $BPFTOOL ] && {
+		echo "pahole is not install, please install dwarves first"
+		exit 1
+	}
+
 	kernel_debuginfo=`rpm -q kernel-debuginfo`
 	[ $? != 0 ] && {
 		echo "kernel-debuginfo is not install, please install it first"
 		exit 1
 	}
 	
+	debugversion=`rpm -q --qf '%{version}-%{release}.%{arch}' kernel-debuginfo`
+	VMLINUX="/usr/lib/debug/lib/modules/$debugversion/vmlinux"
+	[ ! -f ${VMLINUX} ] && {
+		echo "${VMLINUX} is not exist"
+		exit 1
+	}
 }
 
 function build()
@@ -43,12 +55,21 @@ function build()
 
 	[ ! -f ${VMLINUX_H} ]&& {
 		echo "go to generate vmlinux.h"
-		debugversion=`rpm -q --qf '%{version}-%{release}.%{arch}' kernel-debuginfo`
-		vmlinux="/usr/lib/debug/lib/modules/$debugversion/vmlinux"
 		[ ! -d ${VMLINUX_DIR} ]&& {
 			mkdir -p ${VMLINUX_DIR}
 		}
-		bpftool btf dump file ${vmlinux} format c > ${VMLINUX_H}
+		bpftool btf dump file ${VMLINUX} format c > ${VMLINUX_H}
+		[ $? != 0 ] && {
+			cp ${VMLINUX} vmlinux_tmp
+			pahole -J vmlinux_tmp
+			bpftool btf dump file vmlinux_tmp format c > ${VMLINUX_H}
+			[ $? != 0 ] && {
+				echo "generate vmlinux.h failed, ${VMLINUX} is not supported"
+				rm -rf vmlinux_tmp ${VMLINUX_H}
+				exit 1
+			}
+			rm -rf vmlinux_tmp
+		}
 	}
 
 	echo "start compile"
