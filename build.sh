@@ -5,6 +5,8 @@ BPFTOOL=/usr/sbin/bpftool
 SRC_DIR=${PRJ_DIR}/xdiagnose
 VMLINUX_DIR=${SRC_DIR}/common/include
 VMLINUX_H=${VMLINUX_DIR}/vmlinux.h
+KN_HEAD_DIR=${SRC_DIR}/cmdfile/kernel
+DEBUGVERSION=""
 VMLINUX=""
 
 function print_help()
@@ -41,36 +43,50 @@ function check_env()
 		exit 1
 	}
 	
-	debugversion=`rpm -q --qf '%{version}-%{release}.%{arch}' kernel-debuginfo`
-	VMLINUX="/usr/lib/debug/lib/modules/$debugversion/vmlinux"
+	DEBUGVERSION=`rpm -q --qf '%{version}-%{release}.%{arch}' kernel-debuginfo`
+	VMLINUX="/usr/lib/debug/lib/modules/$DEBUGVERSION/vmlinux"
 	[ ! -f ${VMLINUX} ] && {
 		echo "${VMLINUX} is not exist"
 		exit 1
 	}
 }
 
-function build()
+function gen_vmlinux_h()
 {
-	check_env
-
 	[ ! -f ${VMLINUX_H} ]&& {
 		echo "go to generate vmlinux.h"
 		[ ! -d ${VMLINUX_DIR} ]&& {
 			mkdir -p ${VMLINUX_DIR}
 		}
-		bpftool btf dump file ${VMLINUX} format c > ${VMLINUX_H}
-		[ $? != 0 ] && {
-			cp ${VMLINUX} vmlinux_tmp
+
+		cp ${VMLINUX} vmlinux_tmp
+		bpf_support=`objdump -h vmlinux_tmp |grep '\.BTF'`
+		[ "f${bpf_support}" == "f" ] && {
 			pahole -J vmlinux_tmp
-			bpftool btf dump file vmlinux_tmp format c > ${VMLINUX_H}
-			[ $? != 0 ] && {
-				echo "generate vmlinux.h failed, ${VMLINUX} is not supported"
-				rm -rf vmlinux_tmp ${VMLINUX_H}
-				exit 1
-			}
-			rm -rf vmlinux_tmp
 		}
+		bpftool btf dump file vmlinux_tmp format c > ${VMLINUX_H}
+		[ $? != 0 ] && {
+			echo "generate vmlinux.h failed, ${VMLINUX} is not supported"
+			rm -rf vmlinux_tmp ${VMLINUX_H}
+			exit 1
+		}
+		rm -rf vmlinux_tmp
 	}
+
+	mkdir -p ${KN_HEAD_DIR}
+	[ ! -f ${KN_HEAD_DIR}/${DEBUGVERSION}.f ]&& {
+		gdb --batch --ex "info functions" ${VMLINUX} > ${KN_HEAD_DIR}/${DEBUGVERSION}.f
+	}
+
+        [ ! -f ${KN_HEAD_DIR}/${DEBUGVERSION}.h ]&& {
+		pahole ${VMLINUX} > ${KN_HEAD_DIR}/${DEBUGVERSION}.h 
+	}
+}
+
+function build()
+{
+	check_env
+	gen_vmlinux_h
 
 	echo "start compile"
 	cd ${SRC_DIR}
