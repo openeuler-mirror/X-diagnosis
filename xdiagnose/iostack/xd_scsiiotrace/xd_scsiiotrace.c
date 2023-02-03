@@ -559,6 +559,28 @@ static int xd_scsiiotrace_bpf_progs_attach(struct xd_scsiiotrace_bpf *skel)
 	return err;
 }
 
+static struct perf_buffer *
+perf_buffer_create(struct xd_scsiiotrace_bpf *skel)
+{
+	struct perf_buffer *pb = NULL;
+
+#ifndef LIBBPF_MAJOR_VERSION
+	struct perf_buffer_opts pb_opts = {};
+
+	pb_opts.sample_cb = handler_event;
+	pb_opts.lost_cb = handler_lost_event;
+	pb = perf_buffer__new(bpf_map__fd(skel->maps.events),
+				8/* 32KB per CPU */,
+				&pb_opts);
+#else
+	pb = perf_buffer__new(bpf_map__fd(skel->maps.events),
+				8/* 32KB per CPU */,
+				handle_event, handle_lost_event,
+				NULL, NULL);
+#endif
+	return pb;
+}
+
 int main(int argc, char **argv)
 {
 	struct perf_buffer *pb = NULL;
@@ -599,10 +621,7 @@ int main(int argc, char **argv)
 		goto cleanup;
 	}
 
-	pb = perf_buffer__new(bpf_map__fd(skel->maps.events),
-					8/* 32KB per CPU */,
-					handle_event, handle_lost_event,
-					NULL, NULL);
+	pb = perf_buffer_create(skel);
 	if (libbpf_get_error(pb)) {
 		err = -1;
 		fprintf(stderr, "Failed to create perf buffer\n");
