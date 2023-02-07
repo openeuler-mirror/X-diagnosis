@@ -152,7 +152,7 @@ static void print_timeinfo(void)
 	printf("%s", ctime(&now));
 }
 
-static int event_handler(void *ctx, int cpu, void *data, unsigned int data_sz)
+static void event_handler(void *ctx, int cpu, void *data, unsigned int data_sz)
 {
 	int ret;
 	unsigned int kstack_id = 0;
@@ -164,13 +164,13 @@ static int event_handler(void *ctx, int cpu, void *data, unsigned int data_sz)
 	ret = bpf_map_lookup_elem(stack_mapfd, &kstack_id, &stack);
 	if(ret != 0){
 		printf("stack_mapfd: bpf_map_lookup_elem failed\n");
-		return -1;
+		return;
 	}
 	print_timeinfo();
 	print_info(event);
 	print_kern_stack(stack);
 
-	return 0;
+	return;
 }
 
 static void rst_sig_handler(int sig)
@@ -183,7 +183,9 @@ int main(int argc, char **argv)
 	int ret = 0;
 	int ch;
 	struct perf_buffer *pb = NULL;
+#ifndef LIBBPF_MAJOR_VERSION
 	struct perf_buffer_opts pb_opts = {};
+#endif
 	struct xd_tcpreststack_bpf *skel;
 
 	while ((ch = getopt_long(argc, argv, "hd:t:", long_opts, NULL)) != -1) {
@@ -223,9 +225,14 @@ int main(int argc, char **argv)
 		goto cleanup;
 	}
 
+#ifdef LIBBPF_MAJOR_VERSION
+	pb = pb = perf_buffer__new(bpf_map__fd(skel->maps.stackinfo_event), \
+		16, event_handler, NULL, NULL, NULL);	
+#else
 	pb_opts.sample_cb = event_handler;
 	pb = perf_buffer__new(bpf_map__fd(skel->maps.stackinfo_event), \
 			16, &pb_opts); /* 64Kb for each CPU*/
+#endif
 	if (libbpf_get_error(pb)) {
 		fprintf(stderr, "Failed to create perf buffer\n");
 		ret =  -1;
