@@ -11,7 +11,7 @@ ARCH := $(shell uname -m | sed 's/x86_64/x86/' | sed 's/aarch64/arm64/' | sed 's
 
 TARGET_DIR=/usr/bin/xdiag/ebpf
 LINK_OBJ = -lpthread -lelf -lz $(LIBEBPF_BASE)/libbpf.a
-
+DEFS = -DBPF_NO_PRESERVE_ACCESS_INDEX
 INC_ROOT := -I/usr/include \
 	    -I$(ROOT_DIR)/../../common/include \
 	    -I$(ROOT_DIR)/../../common/bpf_common
