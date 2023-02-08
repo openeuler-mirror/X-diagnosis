@@ -59,6 +59,8 @@ class LogCommonCheck(object):
             elems = lines[i].split()
             if elems[0] == 'tmpfs' or elems[0] == 'devtmpfs':
                 continue
+            if elems[4] == '-':
+                continue
 
             used = int(elems[4][:-1])
             if used >= 90:
@@ -78,14 +80,6 @@ class LogCommonCheck(object):
             elems = line.split()
             meminfo[elems[0][:-1]] = elems[1]
 
-        MemTotal = int(meminfo['MemTotal'])
-        MemAvailable = int(meminfo['MemAvailable'])
-
-        if MemTotal != 0 and MemAvailable != 0:
-            memory_percent = (MemTotal - MemAvailable) * 100 / MemTotal
-            if memory_percent > 80:
-                logger.info('The memory has used over %d%%' % memory_percent)
-
         SwapTotal = int(meminfo['SwapTotal'])
         SwapFree = int(meminfo['SwapFree'])
 
@@ -93,6 +87,14 @@ class LogCommonCheck(object):
             swap_percent = (SwapTotal - SwapFree) * 100 / SwapTotal
             if swap_percent > 70:
                 logger.info('The swap memory has used over %d%%' % swap_percent)
+
+        MemTotal = int(meminfo['MemTotal'])
+        MemAvailable = int(meminfo['MemAvailable'])
+
+        if MemTotal != 0 and MemAvailable != 0:
+            memory_percent = (MemTotal - MemAvailable) * 100 / MemTotal
+            if memory_percent > 80:
+                logger.info('The memory has used over %d%%' % memory_percent)
 
     def sysctl_init(self):
         f = open("/etc/sysctl.conf", 'r')
@@ -148,7 +150,7 @@ class LogCommonCheck(object):
             fd_used = int(elems[0]) * 100 / int(elems[2])
 
             if fd_used > 90:
-                logger.info('[%s]%s has used over %d%%' % ('fd_check', fd_used))
+                logger.info('[%s]%s has used over %d%%' % ('fd_check', 'fd', fd_used))
 
     def ntp_check(self):
         cmd = 'ntpd'
