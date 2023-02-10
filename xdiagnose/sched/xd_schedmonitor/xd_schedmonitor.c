@@ -23,11 +23,15 @@
 #include "common_u.h"
 #include "xd_schedmonitor.skel.h"
 
+
+#define MAX_CPU_ARG_LEN 128
+
 static unsigned int running = 1;
 
 static unsigned int threshold_ms = 500;
 static unsigned short kstack_enable = 1;
-static unsigned short waitsched_enable = 1;
+static unsigned short waitsched_enable = 0;
+static unsigned short interrupt_enable = 0;
 
 /* ebpf interface from kernel space */
 static struct xd_schedmonitor_bpf *skel;
@@ -40,6 +44,8 @@ static const struct option long_opts[] = {
 	{ "threshold", 1, 0, 't' },
 	{ "kstack", 1, 0, 'k' },
 	{ "waitsched", 1, 0, 'w' },
+	{ "cpus", 1, 0, 'c' },
+	{ "interrupt", 1, 0, 'I' },
 	{ 0 }
 };
 
@@ -107,21 +113,58 @@ static int do_monitor()
 	return 0;
 }
 
-static int config_paras()
+static int parse_cpu_paras(unsigned char *cpumask, char *cpuarg, int size)
 {
-	int ret;
+	unsigned int cpu;
+	unsigned int curr_cpus;
+	char *cpustr;
+
+	memset(cpumask, 0, size);
+
+	curr_cpus = sysconf(_SC_NPROCESSORS_CONF);
+	cpustr = strtok(cpuarg, ",");
+	while(cpustr){
+		cpu = atoi(cpustr);
+		if(cpu > curr_cpus - 1 || cpu > size * 8 - 1){ /* 1Byte == 8bit */
+			printf("ERROR CPUID:%d, local max cpuid:%d, max cpuid: %d\n", \
+				cpu, curr_cpus - 1, size * 8 - 1);
+			return -1;
+		}
+		cpumask[cpu/8] |= 1 << (cpu % 8);
+		cpustr = strtok(NULL, ",");
+	}
+
+	return 0;
+}
+
+static int config_args(char *cpu_arg)
+{
+	int ret, i;
 	unsigned int key = 0;
 	struct args_user value;
 	memset(&value, 0, sizeof(value));
 
-	value.waitsched_enable = waitsched_enable;
-	value.kstack_enable = kstack_enable;
-	/* ms to ns */
 	printf("CONFIG: threshold: %d ms\n", threshold_ms);
+	/* ms to ns */
 	value.threshold = (__u64)(threshold_ms) * 1000 * 1000;
+	value.waitsched_enable = waitsched_enable;
+	value.interrupt_enable = interrupt_enable;
+	value.kstack_enable = kstack_enable;
+	if(cpu_arg){
+		ret = parse_cpu_paras(value.cpu_mask, cpu_arg, sizeof(value.cpu_mask));
+		if(ret < 0)
+			return ret;
+	} else 
+		memset(value.cpu_mask, 0xff, sizeof(value.cpu_mask));
+	
+	printf("traceing cpu mask:");
+	for(i = sizeof(value.cpu_mask) - 1; i >= 0; i--)
+		printf("%02x%s", value.cpu_mask[i], (i%4==0)?" ":"");
+	printf("\n");
+
 	ret = bpf_map_update_elem(args_mapfd, &key, &value, BPF_ANY);
 	if(ret < 0)
-		printf("config threshold failed\n");
+		printf("config bpf args failed\n");
 	return ret;
 }
 
@@ -183,6 +226,8 @@ static void usage(char *cmd)
 {
 	printf("Usage: xd_schedmonitor [ OPTIONS ]\n"
 		"   -h,--help		this message\n"
+		"   -c,--cpus	  	trace cpuid, default all cpus\n"
+		"   -I,--interrupt  	yes/no, trace hardirq events, default no\n"
 		"   -k,--kstack	  	yes/no, show kernel stack\n"
 		"   -w,--waitsched    	yes/no, trace wait/wakeup slow event\n"
 		"   -t,--threshold    	The threshold for report/ms\n");
@@ -192,13 +237,14 @@ int main(int argc, char **argv)
 {
 	int ret = 0;
 	int ch;
+	char *cpu_arg = NULL;
 
 	if(argc < 2){
 		usage(argv[0]);
 		return -1;
 	}
 
-	while ((ch = getopt_long(argc, argv, "hd:t:k:w:", long_opts, NULL)) != -1) {
+	while ((ch = getopt_long(argc, argv, "hd:t:k:w:c:I:", long_opts, NULL)) != -1) {
 		switch (ch) {
 		case 't':
 			threshold_ms = atoi(optarg);
@@ -208,8 +254,25 @@ int main(int argc, char **argv)
 				kstack_enable = 0;
 			break;
 		case 'w':
-			if(strcmp(optarg, "no") == 0)
-				waitsched_enable = 0;
+			if(strcmp(optarg, "yes") == 0)
+				waitsched_enable = 1;
+			break;
+		case 'I':
+			if(strcmp(optarg, "yes") == 0)
+				interrupt_enable = 1;
+			break;
+		case 'c':
+			if(strlen(optarg) >= MAX_CPU_ARG_LEN || strlen(optarg) == 0){
+				printf("Invalid Cpu args len: %ld\n", strlen(optarg));
+				return -1;
+			}
+			cpu_arg = malloc(MAX_CPU_ARG_LEN);
+			if(cpu_arg == NULL){
+				printf("cpu arg buffer malloc failed\n");
+				return -1;
+			}
+			memset(cpu_arg, 0, MAX_CPU_ARG_LEN);
+			strncpy(cpu_arg, optarg, MAX_CPU_ARG_LEN);
 			break;
 		case 'h':
 			usage(argv[0]);
@@ -227,15 +290,18 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	signal(SIGINT, sig_handler);
-	signal(SIGTERM, sig_handler);
-
 	ret = load_skel();
 	if(ret < 0)
 		goto cleanup;
 
 	/* config common parameters */
-	config_paras();
+	ret = config_args(cpu_arg);
+	if(ret < 0)
+		goto cleanup;
+
+	signal(SIGINT, sig_handler);
+	signal(SIGTERM, sig_handler);
+
 	ret = do_monitor();
 
 cleanup:

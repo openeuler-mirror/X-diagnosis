@@ -7,51 +7,56 @@
 #define TASK_RUNNING 0
 #endif
 
-#define MAX_MAP_CPUS 512
-
 struct {
 	__uint(type, BPF_MAP_TYPE_HASH);
 	__uint(max_entries, 1);
-	__type(key, u32);
-	__type(value, struct args_user);
+	__uint(key_size, sizeof(u32));
+	__uint(value_size, sizeof(struct args_user));
 } args_map SEC(".maps");
 
 struct {
 	__uint(type, BPF_MAP_TYPE_STACK_TRACE);
-	__type(key, u32);
-	__uint(value_size, XDIAG_KERN_STACK_DEPTH * sizeof(u64));
-	__uint(max_entries, MAX_MAP_CPUS * 2);
+	__uint(key_size, sizeof(u32));
+	__uint(value_size, XDIAG_KERN_STACK_DEPTH * sizeof(long));
+	__uint(max_entries, XDIAG_MAX_CPUS * 2);
 } run_kstackmap SEC(".maps");
 
 /* waiting for scheduling map, max */
 struct {
 	__uint(type, BPF_MAP_TYPE_HASH);
-	__uint(max_entries, MAX_MAP_CPUS * 16); /* max running tasks */
-	__type(key, u32);
-	__type(value, u64);
+	__uint(max_entries, XDIAG_MAX_CPUS * 16); /* max running tasks */
+	__uint(key_size, sizeof(u32));
+	__uint(value_size, sizeof(u64));
 } waiting_map SEC(".maps");
 
 /* percpu map, sched_switch data in kernel space */
 struct {
 	__uint(type, BPF_MAP_TYPE_PERCPU_HASH);
-	__uint(max_entries, MAX_MAP_CPUS);
-	__type(key, u32);
-	__type(value, struct runinfo);
+	__uint(max_entries, XDIAG_MAX_CPUS);
+	__uint(key_size, sizeof(u32));
+	__uint(value_size, sizeof(struct runinfo));
 } runinfo_map SEC(".maps");
 
 /* percpu map, hard irq data in kernel space */
 struct {
 	__uint(type, BPF_MAP_TYPE_PERCPU_HASH);
-	__uint(max_entries, MAX_MAP_CPUS);
-	__type(key, u32);
-	__type(value, struct irqinfo);
+	__uint(max_entries, XDIAG_MAX_CPUS);
+	__uint(key_size, sizeof(u32));
+	__uint(value_size, sizeof(struct irqinfo));
 } irqinfo_map SEC(".maps");
 
 struct {
 	__uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-	__type(key, u32);
-	__type(value, u32);
+	__uint(key_size, sizeof(u32));
+	__uint(value_size, sizeof(u32));
 } ev_overrun SEC(".maps");
+
+static inline u32 is_tracing_cpu(u32 cpu, struct args_user *args)
+{
+	unsigned char cpuid;
+	cpuid = (unsigned char)cpu;
+	return args->cpu_mask[cpuid>>3] & (1 << (cpuid % 8));
+}
 
 static void trace_wait_pid(pid_t pid)
 {
@@ -64,6 +69,7 @@ static void trace_wait_pid(pid_t pid)
 
 static void trace_wakeup(struct bpf_raw_tracepoint_args *ctx)
 {
+	u32 cpu;
 	u32 key = 0;
 	pid_t pid;
 	struct args_user *args;
@@ -73,6 +79,9 @@ static void trace_wakeup(struct bpf_raw_tracepoint_args *ctx)
 	if(!args || args->threshold == 0 || args->waitsched_enable == 0)
 		return;
 
+	cpu = bpf_get_smp_processor_id();
+	if(!is_tracing_cpu(cpu, args))
+		return;
 	p = (struct task_struct *)ctx->args[0];
 	bpf_probe_read(&pid, sizeof(pid), &p->pid);
 	trace_wait_pid(pid);
@@ -96,7 +105,7 @@ SEC("kprobe/update_process_times")
 int kp__update_process_times(struct pt_regs *ctx)
 {
 	u32 filter_key = 0;
-	int cpu;
+	u32 cpu;
 	pid_t pid;
 	u64 now, delta;
 	struct args_user *args;
@@ -111,6 +120,8 @@ int kp__update_process_times(struct pt_regs *ctx)
 		return 0;
 	
 	cpu = bpf_get_smp_processor_id();
+	if(!is_tracing_cpu(cpu, args))
+		return 0;
 	info = bpf_map_lookup_elem(&runinfo_map, &cpu);
 	if(!info){
 		struct runinfo new;
@@ -149,6 +160,8 @@ int tp__sched_switch(struct bpf_raw_tracepoint_args *ctx)
 		return 0;
 
 	cpu = bpf_get_smp_processor_id();
+	if(!is_tracing_cpu(cpu, args))
+		return 0;
 	/* reference the source code of tracepoint */
 	prev = (struct task_struct *)ctx->args[1];
 	next = (struct task_struct *)ctx->args[2];
@@ -224,11 +237,13 @@ int tp__irq_handler_entry(struct bpf_raw_tracepoint_args *ctx)
 	struct irqinfo *value;
 
 	args = bpf_map_lookup_elem(&args_map, &filter_key);
-	if(!args || args->threshold == 0)
+	if(!args || args->threshold == 0 || args->interrupt_enable == 0)
 		return 0;
 
 	irq = (int)ctx->args[0];
 	cpu = bpf_get_smp_processor_id();
+	if(!is_tracing_cpu(cpu, args))
+		return 0;
 	value = bpf_map_lookup_elem(&irqinfo_map, &cpu);
 	if(value){
 		value->irq_start_ns = bpf_ktime_get_ns();
@@ -256,13 +271,15 @@ int tp__irq_handler_exit(struct bpf_raw_tracepoint_args *ctx)
 	struct irqaction *action;
 
 	args = bpf_map_lookup_elem(&args_map, &filter_key);
-	if(!args || args->threshold == 0)
+	if(!args || args->threshold == 0 || args->interrupt_enable == 0)
 		return 0;
 
 	irq = (int)ctx->args[0];
 	action = (struct irqaction *)ctx->args[1];
 
 	cpu = bpf_get_smp_processor_id();
+	if(!is_tracing_cpu(cpu, args))
+		return 0;
 	value = bpf_map_lookup_elem(&irqinfo_map, &cpu);
 	if(!value || irq != value->irq)
 		return 0;

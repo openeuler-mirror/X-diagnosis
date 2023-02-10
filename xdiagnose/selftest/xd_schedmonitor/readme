@@ -1,0 +1,17 @@
+
+1. irqovertime: test tool for hard irq run overtime;
+	cd ./irqovertime
+	/* need ressign the vale of irq number */
+	make
+	insmod irqovertime.ko
+	/* threshold must be less than 100ms */
+	xd_schedmonitor -t 100
+2. kthovertime: test tool for kthread run overtime;
+	cd ./kthovertime
+	make 
+	insmod kthovertime.ko
+	xd_schedmonitor -t 300
+3. testsched: test tool for wait schedule event.
+	gcc testsched.c -o testsched
+	./testsched 3
+	

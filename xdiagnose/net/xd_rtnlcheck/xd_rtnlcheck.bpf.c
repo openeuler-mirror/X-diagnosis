@@ -5,8 +5,8 @@
 
 struct {
 	__uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-	__type(key, u32);
-	__type(value, u32);
+	__uint(key_size, sizeof(u32));
+	__uint(value_size, sizeof(u32));
 } info_event SEC(".maps");
 
 long rtnl_lock_addr = 0;

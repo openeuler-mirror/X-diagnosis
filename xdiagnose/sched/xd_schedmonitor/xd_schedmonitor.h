@@ -6,11 +6,15 @@
 #define TASK_COMM_LEN 16
 #endif
 
+#define XDIAG_MAX_CPUS 256
+
 /* ebpf in kernel */
 struct args_user {
 	unsigned short kstack_enable;
 	unsigned short waitsched_enable;
+	unsigned int interrupt_enable;
 	unsigned long long threshold;
+	unsigned char cpu_mask[XDIAG_MAX_CPUS>>3];
 };
 
 struct runinfo {

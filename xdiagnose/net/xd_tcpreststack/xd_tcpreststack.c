@@ -226,7 +226,7 @@ int main(int argc, char **argv)
 	}
 
 #ifdef LIBBPF_MAJOR_VERSION
-	pb = pb = perf_buffer__new(bpf_map__fd(skel->maps.stackinfo_event), \
+	pb = perf_buffer__new(bpf_map__fd(skel->maps.stackinfo_event), \
 		16, event_handler, NULL, NULL, NULL);	
 #else
 	pb_opts.sample_cb = event_handler;
