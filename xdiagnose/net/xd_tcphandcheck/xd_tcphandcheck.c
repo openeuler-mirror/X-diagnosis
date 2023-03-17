@@ -54,12 +54,16 @@ static int bind_ret_handler(struct xd_kern_msg *kern_msg)
 	{
 		case -EADDRNOTAVAIL:
 			printf("%s:%d inet_bind: return -EADDRNOTAVAIL, check if ip_nonlocal_bind is disable and your address is not local\n", addr_s, port);
+			break;
 		case -EACCES:
 			printf("%s:%d inet_bind: return -EACCES, check if your port is less than ip_unprivileged_port_start\n", addr_s, port);
+			break;
 		case -EINVAL:
 			printf("%s:%d inet_bind: return -EINVAL, check if you bind to an existing link or this socket has already existed bound to the port\n", addr_s, port);
+			break;
 		case -EADDRINUSE:
 			printf("%s:%d inet_bind: return -EADDRINUSE, check if this port has been used by others\n", addr_s, port);
+			break;
 		default:
 			break;
 	}
@@ -217,7 +221,7 @@ int main(int argc, char **argv)
 		goto cleanup;
 	}
 #ifdef LIBBPF_MAJOR_VERSION
-	pb = perf_buffer__new(bpf_map__fd(skel->maps.ev_overrun), \
+	pb = perf_buffer__new(bpf_map__fd(skel->maps.xd_kern_events), \
 			16, probe_handler, NULL, NULL, NULL);
 #else
 	memset(&pb_opts, 0, sizeof(pb_opts));

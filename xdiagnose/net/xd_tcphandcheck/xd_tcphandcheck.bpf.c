@@ -83,6 +83,8 @@ static __inline int chk_inet_bind_ret(struct pt_regs *ctx)
 	bpf_perf_event_output(ctx, &xd_kern_events, BPF_F_CURRENT_CPU, \
 			&kern_msg, sizeof(struct xd_kern_msg));
 
+	bpf_map_delete_elem(&probe_args, &pid);
+
 	return 0;
 }
 
