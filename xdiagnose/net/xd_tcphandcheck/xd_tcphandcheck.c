@@ -192,7 +192,9 @@ int main(int argc, char **argv)
 {
 	int ret = 0;
 	struct perf_buffer *pb = NULL;
+#ifndef LIBBPF_MAJOR_VERSION
 	struct perf_buffer_opts pb_opts = {};
+#endif
 	struct xd_tcphandcheck_bpf *skel;
 
 	skel = xd_tcphandcheck_bpf__open_and_load();
@@ -214,10 +216,15 @@ int main(int argc, char **argv)
 		ret =  -1;
 		goto cleanup;
 	}
-
+#ifdef LIBBPF_MAJOR_VERSION
+	pb = perf_buffer__new(bpf_map__fd(skel->maps.ev_overrun), \
+			16, probe_handler, NULL, NULL, NULL);
+#else
+	memset(&pb_opts, 0, sizeof(pb_opts));
 	pb_opts.sample_cb = probe_handler;
 	pb = perf_buffer__new(bpf_map__fd(skel->maps.xd_kern_events), \
 			16, &pb_opts); /* 64Kb for each CPU*/
+#endif
 	if (libbpf_get_error(pb)) {
 		fprintf(stderr, "Failed to create perf buffer\n");
 		ret =  -1;
