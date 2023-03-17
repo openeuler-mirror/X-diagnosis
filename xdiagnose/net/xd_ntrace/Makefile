@@ -2,7 +2,7 @@ include ../../common/mk/var.mk
 
 INCLUDES := -I$(INC_ROOT)
 
-APPS = xd_rtnlcheck
+APPS = xd_ntrace
 
 .PHONY: app
 app: $(APPS)
@@ -14,7 +14,7 @@ clean:
 # Build final application
 $(APPS): %: %.o
 	$(CC) $(CFLAGS) $^ $(LINK_OBJ) -o $@
-	@echo $@ "compiling completed."
+	 @echo $@ "compiling completed."
 
 $(patsubst %,%.o,$(APPS)): %.o: %.skel.h
 
@@ -35,6 +35,6 @@ install:
 
 # Build BPF code
 %.bpf.o: %.bpf.c
-	$(CLANG) -g -O2 $(DEFS) -target bpf -D__TARGET_ARCH_$(ARCH)	   \
+	$(CLANG) -g -O2 -target bpf -D__TARGET_ARCH_$(ARCH) $(BPF_NO_PRESERVE_ACCESS_INDEX)\
 		     $(INCLUDES) -c $(filter %.c,$^) -o $@
 	$(LLVM_STRIP) -g $@

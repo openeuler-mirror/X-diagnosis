@@ -66,10 +66,8 @@ int bpf_tcp_get_info(struct pt_regs *ctx)
 		key.daddr[0] = BPF_PROBE_VAL(tcp_sk->inet_conn.icsk_inet.inet_daddr);
 	/* ipv6 */
 	} else if (BPF_PROBE_VAL(sk->sk_family) == AF_INET6){
-		if(!pinet6){
-			bpf_printk("icsk_inet->pinet6 is NULL\n");
+		if(!pinet6)
 			return 0;
-		}
 		bpf_probe_read_kernel((void *)key.saddr, sizeof(key.saddr), \
 						(void *)(pinet6->saddr.s6_addr32));
 		
@@ -79,11 +77,8 @@ int bpf_tcp_get_info(struct pt_regs *ctx)
 			bpf_probe_read_kernel((void *)key.daddr, sizeof(key.daddr), \
 							(void *)(daddr->s6_addr32));
 		}
-	} else {
-		bpf_printk("BPF get_tcp_info family:%d incrrect\n", 
-					BPF_PROBE_VAL(sk->sk_family));
+	} else
 		return -1;
-	}
 
 	bpf_map_update_elem(&tcpinfo_map, &key, &diaginfo, BPF_ANY);
 

@@ -2,7 +2,7 @@ include ../../common/mk/var.mk
 
 INCLUDES := -I$(INC_ROOT)
 
-APPS = xd_rtnlcheck
+APPS = xd_schedmonitor
 
 .PHONY: app
 app: $(APPS)
@@ -14,7 +14,7 @@ clean:
 # Build final application
 $(APPS): %: %.o
 	$(CC) $(CFLAGS) $^ $(LINK_OBJ) -o $@
-	@echo $@ "compiling completed."
+	 @echo $@ "compiling completed."
 
 $(patsubst %,%.o,$(APPS)): %.o: %.skel.h
 

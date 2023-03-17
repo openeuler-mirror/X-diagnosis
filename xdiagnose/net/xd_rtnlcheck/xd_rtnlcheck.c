@@ -112,7 +112,7 @@ static void rst_sig_handler(int sig)
 	running = 0;
 }
 
-static int event_handler(void *ctx, int cpu, void *data, unsigned int data_sz)
+static void event_handler(void *ctx, int cpu, void *data, unsigned int data_sz)
 {
 	time_t now;
 	struct event_rtnl *event;
@@ -128,15 +128,17 @@ static int event_handler(void *ctx, int cpu, void *data, unsigned int data_sz)
 	}
 
 	running = 0;
-	return 0;
+	return;
 }
 
 int main(int argc, char **argv)
 {
 	int ret;
+	void *event_pb = NULL;
 	struct xd_rtnlcheck_bpf *skel;
-	struct perf_buffer *pb = NULL;
+#ifndef LIBBPF_MAJOR_VERSION
 	struct perf_buffer_opts pb_opts = {};
+#endif
 
 	memlock_rlimit();
 
@@ -154,10 +156,15 @@ int main(int argc, char **argv)
 		goto cleanup;
 	}
 
+#ifdef LIBBPF_MAJOR_VERSION
+	event_pb = perf_buffer__new(bpf_map__fd(skel->maps.info_event), \
+			16, event_handler, NULL, NULL, NULL);
+#else
 	pb_opts.sample_cb = event_handler;
-	pb = perf_buffer__new(bpf_map__fd(skel->maps.info_event), \
+	event_pb = perf_buffer__new(bpf_map__fd(skel->maps.info_event), \
 				16, &pb_opts);
-	if (libbpf_get_error(pb)) {
+#endif
+	if (libbpf_get_error(event_pb)) {
 		fprintf(stderr, "Failed to create perf buffer\n");
 		ret = -1;
 		goto cleanup;
@@ -174,7 +181,7 @@ int main(int argc, char **argv)
 	signal(SIGINT, rst_sig_handler);
 	signal(SIGTERM, rst_sig_handler);
 	while (running) {
-		ret = perf_buffer__poll(pb, 1000);
+		ret = perf_buffer__poll(event_pb, 1000);
 		if (ret < 0 && ret != -EINTR) {
 			fprintf(stderr, "Polling perf buffer error:%d\n", ret);
 		}

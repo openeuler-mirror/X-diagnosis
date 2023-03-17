@@ -27,6 +27,7 @@ rpm -ivh xdiagnose-1.x-x.rpm
 * xd_ext4fsstat
 * xd_iolatency
 * xd_rtnlcheck
+* xd_skblen_check
 
 ### 1.0 xdiag
 ```shell
@@ -422,3 +423,11 @@ EXAMPLE:  xd_rtnlcheck    #Check rtnl_mutex's owner
 ### 功能：
 用于检测当前是否有进程持有rtnl_mutex锁，如果有则输出其pid和comm.
 
+### 2.0 xd_skblen_check
+```shell
+USAGE xd_skblen_check （无参数）
+
+EXAMPLE:  xd_skblen_check    #Check skblen
+```
+### 功能：
+用于检测网络包的长度和实际的数据长度是否相等，如果不相等则输出其mac地址、协议号和报文长度.

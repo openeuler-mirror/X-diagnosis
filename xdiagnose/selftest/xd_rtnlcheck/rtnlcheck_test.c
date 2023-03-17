@@ -15,13 +15,9 @@ static int kthread_test_func(void *data)
 {
 	ENTER();
 	while (!kthread_should_stop()) {
-		long i = 0;
 		DBG("rtnl_lock");
 		rtnl_lock();
-		while (i < 20000000000) {
-			smp_processor_id();
-			++i;
-		}
+		msleep(10000);
 		rtnl_unlock();
 		DBG("rtnl_unlock");
 

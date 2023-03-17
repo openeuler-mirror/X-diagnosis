@@ -567,8 +567,8 @@ perf_buffer_create(struct xd_scsiiotrace_bpf *skel)
 #ifndef LIBBPF_MAJOR_VERSION
 	struct perf_buffer_opts pb_opts = {};
 
-	pb_opts.sample_cb = handler_event;
-	pb_opts.lost_cb = handler_lost_event;
+	pb_opts.sample_cb = handle_event;
+	pb_opts.lost_cb = handle_lost_event;
 	pb = perf_buffer__new(bpf_map__fd(skel->maps.events),
 				8/* 32KB per CPU */,
 				&pb_opts);

@@ -1,6 +1,6 @@
 include common/mk/var.mk
   
-APPS = $(filter ./%/, $(dir $(shell find . -name Makefile)))
+APPS = $(filter ./%/, $(dir $(shell find . -path ./selftest -prune -o -name Makefile)))
 
 .PHONY: all clean install
 all: apps

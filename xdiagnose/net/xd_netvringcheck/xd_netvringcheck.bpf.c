@@ -28,7 +28,7 @@ int bpf__receive_buf(struct pt_regs *ctx)
 	long key;
 	struct virtnet_info *vi;
 	struct net_device *dev;
-	struct receive_queue *rq, *rq_base;
+	struct receive_queue *rq;
 	struct virtqueue *vq;
 	struct vring_virtqueue *vring_vq;
 	struct value_vring new = {0};
@@ -39,6 +39,9 @@ int bpf__receive_buf(struct pt_regs *ctx)
 	rq = (struct receive_queue *)PT_REGS_PARM2(ctx);
 	vq = BPF_PROBE_VAL(rq->vq);
 	vring_vq = (struct vring_virtqueue *)vq;
+	if(BPF_PROBE_VAL(vring_vq->packed_ring))
+		return 0;
+
 	vring_used = BPF_PROBE_VAL(vring_vq->split.vring.used);
 	num = BPF_PROBE_VAL(vring_vq->split.vring.num);
 	num_uring = ((BPF_PROBE_VAL(vring_used->idx) & (num-1)) + num \
@@ -55,9 +58,9 @@ int bpf__receive_buf(struct pt_regs *ctx)
 		}
 	}
 	else{
-		rq_base = BPF_PROBE_VAL(vi->rq);
 		dev = BPF_PROBE_VAL(vi->dev);
-		new.queue_idx = (rq - rq_base) / sizeof(struct receive_queue);
+		/* 0:rx0 1:tx0 2:rx1 3:tx1 ... 2N:rxN 2N+1:txN 2N+2:cvq */
+		new.queue_idx = BPF_PROBE_VAL(vq->index) / 2;
 		new.num_uring = num_uring;
 		new.num_free = BPF_PROBE_VAL(vq->num_free);
 		new.num_total = BPF_PROBE_VAL(vring_vq->split.vring.num);
@@ -95,6 +98,9 @@ int bpf__start_xmit(struct pt_regs *ctx)
 	sq = BPF_PROBE_VAL(vi->sq) + idx;
 	vq = BPF_PROBE_VAL(sq->vq);
 	vring_vq = (struct vring_virtqueue *)vq;
+	if(BPF_PROBE_VAL(vring_vq->packed_ring))
+		return 0;
+
 	vring_used = BPF_PROBE_VAL(vring_vq->split.vring.used);
 	num = BPF_PROBE_VAL(vring_vq->split.vring.num);
 	num_uring = ((BPF_PROBE_VAL(vring_used->idx) & (num-1)) + num \
