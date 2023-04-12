@@ -181,7 +181,7 @@ class LogCommonCheck(object):
         cmd = 'ntpq -p'
         logger.info('[ntp_check] ntp server status error, use <%s> show deatils' % cmd)
 
-    def ip_conflict_check(self, ip_addr = '', device = 'eth0'):
+    def ip_conflict_check(self, ip_addr = '', device = ''):
         if ip_addr == '':
             try:
                 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -194,11 +194,16 @@ class LogCommonCheck(object):
             finally:
                 s.close()
 
-        cmd = self.cmd['arping'] + ' ' + ip_addr
+        if device == '':
+            cmd = 'ip route | grep ' + ip_addr + ' | awk -F \'[\\t*]\' \'{print $3}\''
+            stats = getstatusoutput(cmd)
+            if stats[0] != 0:
+                logger.info('%s is not available' % cmd)
+                return
 
-        if device != '':
-            cmd = cmd + ' -I ' + device
+            device = stats[1]
 
+        cmd = self.cmd['arping'] + ' ' + ip_addr + ' -I ' + device
         stats = getstatusoutput(cmd)
         if stats[0] != 0:
             lines = stats[1].split('\n')
