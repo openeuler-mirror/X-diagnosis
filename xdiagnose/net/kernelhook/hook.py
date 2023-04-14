@@ -61,7 +61,7 @@ GET_HOOK_CMD = 'p:FUNC FUNC DEV IP %s '
 
 FTRACE_CMD_FILTER_DEV = '(devname==\"%s\")'
 FTRACE_CMD_FILTER_IP = '(srcip==%s || dstip==%s)'
-FTRACE_CMD_FILTER_CMD = "echo '%s' > /sys/kernel/debug/tracing/events/kprobes/filter"
+FTRACE_CMD_FILTER_PATH = '/sys/kernel/debug/tracing/events/kprobes/filter'
 
 hook_index_to_list = {}
 devname = ''
@@ -143,7 +143,9 @@ def set_trace(cmdline, version):
             else:
                 filter = FTRACE_CMD_FILTER_IP % (host, host)
             # print(FTRACE_CMD_FILTER_CMD % filter)
-            os.system(FTRACE_CMD_FILTER_CMD % filter)
+            file = open(FTRACE_CMD_FILTER_PATH, 'w')
+            file.write(filter + '\n')
+            file.close()
 
         os.system('echo 1 > /sys/kernel/debug/tracing/events/kprobes/enable')
         os.system('echo 1 > /sys/kernel/debug/tracing/tracing_on')
