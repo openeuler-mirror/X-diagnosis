@@ -21,6 +21,9 @@ class Inspector(object):
         self.timer = None
         self.interval = config.getint('inspect', 'Interval') or 3
         self.configfile = os.path.join(os.path.dirname(__file__), 'sysmonitor.conf')
+        if not os.path.exists(self.configfile):
+            self.configfile = '/etc/x-diagnose/sysmonitor.conf'
+
         self.modules = {'cpucheck'      : [LogCpu(),True],
                         'commoncheck'   : [LogCommonCheck(),True],
                         'conntrackcheck': [LogConntrack(),True],
