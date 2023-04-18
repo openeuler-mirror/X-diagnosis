@@ -41,7 +41,6 @@ static int stack_depth = 3;
 
 static const struct option long_opts[] = {
 	{ "help", 0, 0, 'h' },
-	{ "time", 1, 0, 't' },
 	{ "depth", 1, 0, 'd' },
 	{ 0 }
 };
@@ -111,7 +110,6 @@ static void usage(char *cmd)
 {
 	printf("Usage: xd_tcpreststack [ OPTIONS ]\n"
 			"   -h,--help		   this message\n"
-			"   -t,--time		   The frequency of the probe/ms\n"
 			"   -d,--depth		   Kernel stack Depth\n");
 }
 
