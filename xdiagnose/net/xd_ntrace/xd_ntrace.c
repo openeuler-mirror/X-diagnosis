@@ -126,7 +126,7 @@ static int parse_protostr(const char *proto_str)
 		return IPPROTO_ICMPV6;
 	else {
 		printf("Invalid protocol: %s\n", proto_str);
-		return -1;
+		return IPPROTO_MAX;
 	}
 }
 
@@ -176,7 +176,7 @@ int main(int argc, char **argv)
 		switch (ch) {
 		case 'p':
 			filter.protocol = parse_protostr(optarg);
-			if (filter.protocol == -1)
+			if (filter.protocol == IPPROTO_MAX)
 				return 1;
 			break;
 		case 'H':
