@@ -10,7 +10,7 @@
  * See the Mulan PSL v2 for more details.
  * Author: wubo
  * Create: 2022-09-15
- * Description: Trace scsi cmnd for scsi device.
+ * Description: Trace scsi cmd for scsi device.
  * ****************************************************************************/
 #include <stdio.h>
 #include <stdlib.h>

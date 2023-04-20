@@ -319,7 +319,6 @@ int bpf__ext4_writepages_result(void *ctx)
 	struct pid_key pkey = {};
 	struct file_key fkey = {};
 	size_t count;
-	__u64 pid_tgid;
 
 	struct ext4_writepages_result_format *c = 
 		(struct ext4_writepages_result_format*)ctx;
