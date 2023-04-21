@@ -51,11 +51,10 @@ static const struct option long_opts[] = {
 
 static void print_timeinfo(void)
 {
-	char timestr[64]; /* time format max len */
+	char timestr[64] = {0}; /* time format max len */
 	time_t now;
 	time(&now);
-	strncpy(timestr, ctime(&now), sizeof(timestr));
-	timestr[strlen(timestr)-1] = 0;
+	strncpy(timestr, ctime(&now), sizeof(timestr) - 1);
 	printf("%s -- ", timestr);
 }
 
@@ -272,7 +271,7 @@ int main(int argc, char **argv)
 				return -1;
 			}
 			memset(cpu_arg, 0, MAX_CPU_ARG_LEN);
-			strncpy(cpu_arg, optarg, MAX_CPU_ARG_LEN);
+			strncpy(cpu_arg, optarg, MAX_CPU_ARG_LEN - 1);
 			break;
 		case 'h':
 			usage(argv[0]);

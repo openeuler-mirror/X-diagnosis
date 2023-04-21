@@ -21,7 +21,6 @@
 /*  bpf end */
 
 #include "xd_tcphandcheck.h"
-#include "common_u.h"
 #include "xd_tcphandcheck.skel.h"
 
 #define MAX_UADDR_STRLEN 32
@@ -162,7 +161,7 @@ static int tcp_in_window_handler(struct xd_kern_msg *kern_msg)
 	return 0;
 }
 
-static int probe_handler(void *ctx, int cpu, void *data, unsigned int data_sz)
+static void probe_handler(void *ctx, int cpu, void *data, unsigned int data_sz)
 {
 	struct xd_kern_msg *kern_msg;
 	kern_msg = (struct xd_kern_msg *)data;

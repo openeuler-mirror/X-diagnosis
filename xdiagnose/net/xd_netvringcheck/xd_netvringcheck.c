@@ -112,7 +112,7 @@ int main(int argc, char **argv)
 		usage(argv[0]);
 		return -1;
 	}
-	strncpy(filter_name, argv[1], sizeof(filter_name));
+	strncpy(filter_name, argv[1], sizeof(filter_name) - 1);
 	if(strlen(filter_name) < 2){
 		usage(argv[0]);
 		return -1;
