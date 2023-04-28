@@ -1,4 +1,0 @@
-recursive-include xdiagnose/cmdfile/kernel *.f
-recursive-include xdiagnose/cmdfile/kernel *.h
-recursive-include xdiagnose/cmdfile/source *.src
-recursive-include etc/x-diagnose *.conf
