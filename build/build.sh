@@ -22,7 +22,7 @@ function print_help()
 function clean()
 {
 	cd ${SRC_DIR}
-	make clean
+	rm -rf ./build_ebpf
 }
 
 function check_env()
@@ -91,9 +91,9 @@ function build()
 	gen_vmlinux_h
 
 	echo "start compile"
-	
 	cd ${SRC_DIR}
-	cmake . -DXD_INSTALL_BINDIR=$1
+	cmake . -DXD_INSTALL_BINDIR=$1 -B build_ebpf
+	cd build_ebpf
 	make
 }
 

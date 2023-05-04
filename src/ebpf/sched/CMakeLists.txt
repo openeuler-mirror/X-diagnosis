@@ -23,7 +23,4 @@ IF(CMAKE_BUILD_TYPE STREQUAL Debug)
     SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${COVERAGE_OPTION} ${ASAN_OPTIONS}")
 ENDIF()
 
-add_subdirectory(iostack)
-add_subdirectory(net)
-add_subdirectory(sched)
-
+add_subdirectory(xd_rtnlcheck)
