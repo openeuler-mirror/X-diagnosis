@@ -195,7 +195,7 @@ class LogCommonCheck(object):
                 s.close()
 
         if device == '':
-            cmd = 'ip route | grep ' + ip_addr + ' | awk -F \'[\\t*]\' \'{print $3}\''
+            cmd = 'ip route | grep ' + ip_addr + ' | awk -F \'[ \\t*]\' \'{print $3}\''
             stats = getstatusoutput(cmd)
             if stats[0] != 0:
                 logger.info('%s is not available' % cmd)
