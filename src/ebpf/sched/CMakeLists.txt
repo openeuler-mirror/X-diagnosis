@@ -24,3 +24,4 @@ IF(CMAKE_BUILD_TYPE STREQUAL Debug)
 ENDIF()
 
 add_subdirectory(xd_rtnlcheck)
+add_subdirectory(xd_schedmonitor)

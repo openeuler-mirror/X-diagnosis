@@ -4,7 +4,7 @@
 # Create: 2023-02-15
 
 add_subdirectory(xd_ext4fsstat)
-#add_subdirectory(xd_iolatency)
-#add_subdirectory(xd_scsiiocount)
-#add_subdirectory(xd_scsiiotrace)
+add_subdirectory(xd_iolatency)
+add_subdirectory(xd_scsiiocount)
+add_subdirectory(xd_scsiiotrace)
 
