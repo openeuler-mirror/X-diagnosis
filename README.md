@@ -35,6 +35,8 @@ rpm -ivh xdiagnose-1.x-x.rpm
 * xd_rtnlcheck
 * xd_skblen_check
 * xd_tcphandcheck
+* xd_ntrace
+
 
 ### 1.0 xdiag
 ```shell
@@ -449,3 +451,18 @@ EXAMPLE:  xd_tcphandcheck
 支持timewait链接复用失败
 支持文件句柄超出导致无法创建socket
 支持端口复用场景下链接闪断后seq序号异常导致的无法建链
+
+### 1.12 xd_ntrace
+```shell
+Start network stack trace [support v4/v6 and tcp/udp/icmp]
+
+Usage: ./xd_ntrace [...]
+-p, --protocol <tcp/udp/icmp/icmp6> protocol
+-H, --host      <src/dest ip>
+-P, --hostport  <src/dest port>
+-h, --help      Display this help
+
+```
+### 功能：
+协议栈丢包检测工具（当前支持ipv6、ipv4下的ping丢包检测，tcp和udp后续会支持）
+支持18种类型的协议栈丢包类型检测。

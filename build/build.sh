@@ -100,7 +100,8 @@ function build()
 function install()                                                     
 {
 	cd ${SRC_DIR}
-	export DESTDIR=$1
+	cmake . -DXD_INSTALL_BINDIR=$1 -B build_ebpf
+	cd build_ebpf
 	make install
 }
 
