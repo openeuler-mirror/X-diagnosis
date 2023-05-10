@@ -1,13 +1,19 @@
-# x-diagnose
+# x-diagnosis
 
 ## 概述
-X-diagnose基于EulerOS维护团队多年运维经验，通过对案例的总结/分析形成的系统运维工具集，
-主要功能包含问题定位、系统巡检/监控、ftrace增强、一键收集日志等功能，是一款集成分析、
-流程跟踪、信息定时记录、历史经验固化等功能于一体的OS内核问题定位工具。
+X-diagnosis基于EulerOS维护团队多年运维经验，通过对案例的总结/分析形成的系统运维套件，
+主要功能包含问题定位工具集、系统巡检、ftrace增强等功能。
 
 ## 安装x-diagnose
-**(1) 依赖软件**
+**(1) 工具集代码直接编译安装**
+
+1)编译依赖
 * python 3.7+
+* elfutils-devel clang llvm libbpf libbpf-devel libbpf-static bpftool dwarves
+* kernel-debuginfo gdb
+
+2)编译
+* cd build; sh build.sh -i xxxx(指定安装路径，默认安装在/usr/bin/xdiag/ebpf/)
 
 **(2) 下载rpm包**
 ```
@@ -28,10 +34,13 @@ rpm -ivh xdiagnose-1.x-x.rpm
 * xd_iolatency
 * xd_rtnlcheck
 * xd_skblen_check
+* xd_tcphandcheck
+* xd_ntrace
+
 
 ### 1.0 xdiag
 ```shell
-usage: xdiag [-h] [--inspect] {tcphandcheck,eftrace,ntrace,hook} ...
+usage: xdiag [-h] [--inspect] {eftrace,ntrace} ...
 
 xdiagnose tool
 
@@ -41,10 +50,8 @@ optional arguments:
 
 select module:
   {tcphandcheck,eftrace,ntrace,hook}
-    tcphandcheck        tcp_hand_check module
     eftrace             eftrace module
     ntrace              net trace module
-    hook                hook module
 ```
 
 **--inspect ：系统异常巡检(可以和select module一起使用)支持如下检测项：**
@@ -423,7 +430,7 @@ EXAMPLE:  xd_rtnlcheck    #Check rtnl_mutex's owner
 ### 功能：
 用于检测当前是否有进程持有rtnl_mutex锁，如果有则输出其pid和comm.
 
-### 2.0 xd_skblen_check
+### 1.10 xd_skblen_check
 ```shell
 USAGE xd_skblen_check （无参数）
 
@@ -431,3 +438,31 @@ EXAMPLE:  xd_skblen_check    #Check skblen
 ```
 ### 功能：
 用于检测网络包的长度和实际的数据长度是否相等，如果不相等则输出其mac地址、协议号和报文长度.
+
+### 1.11 xd_tcphandcheck
+```shell
+USAGE xd_tcphandcheck （无参数）
+
+EXAMPLE:  xd_tcphandcheck
+```
+### 功能：
+支持连接队列满
+支持bind失败
+支持timewait链接复用失败
+支持文件句柄超出导致无法创建socket
+支持端口复用场景下链接闪断后seq序号异常导致的无法建链
+
+### 1.12 xd_ntrace
+```shell
+Start network stack trace [support v4/v6 and tcp/udp/icmp]
+
+Usage: ./xd_ntrace [...]
+-p, --protocol <tcp/udp/icmp/icmp6> protocol
+-H, --host      <src/dest ip>
+-P, --hostport  <src/dest port>
+-h, --help      Display this help
+
+```
+### 功能：
+协议栈丢包检测工具（当前支持ipv6、ipv4下的ping丢包检测，tcp和udp后续会支持）
+支持18种类型的协议栈丢包类型检测。
