@@ -61,7 +61,7 @@ struct iolatency_attach_wapper {
 	char *tp_base;
 	char *tp_name;
 	struct bpf_program *prog;
-	struct bpf_link *link;
+	struct bpf_link **link;
 	bool attach;
 };
 
@@ -540,21 +540,21 @@ static int xd_iolatency_section_attach(struct xd_iolatency_bpf_c *obj)
 	struct iolatency_attach_wapper *ptr;
 	struct iolatency_attach_wapper attach_progs[] = {
 		{"block", "block_bio_queue", obj->progs.bpf__block_bio_queue,
-			obj->links.bpf__block_bio_queue, true},
+			&obj->links.bpf__block_bio_queue, true},
 		{"block", "block_getrq", obj->progs.bpf__block_getrq,
-			obj->links.bpf__block_getrq, true},
+			&obj->links.bpf__block_getrq, true},
 		{"block", "block_bio_frontmerge", obj->progs.bpf__block_bio_frontmerge,
-			obj->links.bpf__block_bio_frontmerge, true},
+			&obj->links.bpf__block_bio_frontmerge, true},
 		{"block", "block_bio_backmerge", obj->progs.bpf__block_bio_backmerge,
-			obj->links.bpf__block_bio_backmerge, true},
+			&obj->links.bpf__block_bio_backmerge, true},
 		{"block", "block_rq_merge", obj->progs.bpf__block_rq_merge,
-			obj->links.bpf__block_rq_merge, true},
+			&obj->links.bpf__block_rq_merge, true},
 		{"block", "block_rq_insert", obj->progs.bpf__block_rq_insert,
-			obj->links.bpf__block_rq_insert, true},
+			&obj->links.bpf__block_rq_insert, true},
 		{"block", "block_rq_issue", obj->progs.bpf__block_rq_issue,
-			obj->links.bpf__block_rq_issue, true},
+			&obj->links.bpf__block_rq_issue, true},
 		{"block", "block_rq_complete", obj->progs.bpf__block_rq_complete,
-			obj->links.bpf__block_rq_complete, true},
+			&obj->links.bpf__block_rq_complete, true},
 	};
 
 	size = ARRAY_SIZE(attach_progs);
@@ -563,8 +563,8 @@ static int xd_iolatency_section_attach(struct xd_iolatency_bpf_c *obj)
 		ptr = &attach_progs[i];
 		if (tracepoint_exist(ptr->tp_base, ptr->tp_name) &&
 		    ptr->attach) {
-			ptr->link = bpf_program__attach(ptr->prog);
-			if (!ptr->link) {
+			*ptr->link = bpf_program__attach(ptr->prog);
+			if (!(*ptr->link)) {
 				err = -errno;
 				fprintf(stderr, "failed to attach %s %s\n",
 					ptr->tp_name, strerror(-err));
