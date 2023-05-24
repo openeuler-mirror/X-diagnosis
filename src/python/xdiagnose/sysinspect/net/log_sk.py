@@ -2,23 +2,20 @@
 import re
 from subprocess import getstatusoutput
 
-from xdiagnose.utils.logger import inspect_warn_logger as logger
-
 
 class LogSockstat(object):
-    logv4 = {
-        'TCP_mem':     'tcp memory',
-        'UDP_mem':     'udp memory',
+    log_v4 = {
+        'TCP_mem': 'tcp memory',
+        'UDP_mem': 'udp memory',
         'FRAG_memory': 'frag memory',
     }
-
-    logv6 = {
+    log_v6 = {
         'FRAG6_memory': 'frag6 memory',
     }
+    log = dict(log_v4, **log_v6)
 
-    log = dict(logv4, **logv6)
-
-    def __init__(self, cmd='cat /proc/net/sockstat'):
+    def __init__(self, logger, _config, cmd='cat /proc/net/sockstat'):
+        self.logger = logger
         self.cmd = cmd
         self.diff = {}
         self.sysctl = {}
@@ -28,7 +25,7 @@ class LogSockstat(object):
         if stats[0] == 0:
             self.old_stats = stats[1]
         else:
-            logger.info('%s is not available' % self.cmd)
+            self.logger.info('%s is not available' % self.cmd)
 
     def get_sysctl(self):
         out = getstatusoutput('sysctl -a')
@@ -72,7 +69,7 @@ class LogSockstat(object):
             new_lines = stats[1].split('\n')
 
             if len(old_lines) != len(new_lines):
-                logger.info('%s line numbers not equal' % self.cmd)
+                self.logger.info('%s line numbers not equal' % self.cmd)
                 return self.diff
 
             for i in range(len(new_lines)):
@@ -82,17 +79,19 @@ class LogSockstat(object):
                 old_elems = old_lines[i].split(' ')
                 new_elems = new_lines[i].split(' ')
                 if len(old_elems) != len(new_elems):
-                    logger.info('%s elems numbers not equal, line:%d'
-                                % (self.cmd, i + 1))
+                    self.logger.info('%s elems numbers not equal, line:%d'
+                                     % (self.cmd, i + 1))
                     continue
 
                 proto = new_elems[0][:-1]
 
                 for j in range(len(new_elems)):
-                     if old_elems[j] != new_elems[j] and j - 1 >= 0 and \
-                         old_elems[j].isdigit() and new_elems[j].isdigit():
-                         stats_name = proto + '_' + new_elems[j - 1]
-                         self.diff[stats_name] = int(new_elems[j])
+                    if (old_elems[j] != new_elems[j]
+                            and j - 1 >= 0
+                            and old_elems[j].isdigit()
+                            and new_elems[j].isdigit()):
+                        stats_name = proto + '_' + new_elems[j - 1]
+                        self.diff[stats_name] = int(new_elems[j])
         finally:
             self.old_stats = stats[1]
 
@@ -103,15 +102,25 @@ class LogSockstat(object):
         for k, v in sock_stats.items():
             if k in self.log:
                 if k == 'TCP_mem' and v > self.sysctl['tcp_mem'][2] - 10:
-                    logger.info('%s: %s %s' % (k, v, self.log[k]))
+                    self.logger.info('%s: %s %s' % (k, v, self.log[k]))
 
                 elif k == 'UDP_mem' and v > self.sysctl['udp_mem'][2] - 10:
-                    logger.info('%s: %s %s' % (k, v, self.log[k]))
+                    self.logger.info('%s: %s %s' % (k, v, self.log[k]))
 
-                elif k == 'FRAG_memory' and \
-                    v > self.sysctl['ipfrag_high_thresh'] - 10:
-                    logger.info('%s: %s %s' % (k, v, self.log[k]))
+                elif (k == 'FRAG_memory'
+                      and v > self.sysctl['ipfrag_high_thresh'] - 10):
+                    self.logger.info('%s: %s %s' % (k, v, self.log[k]))
 
-                elif k == 'FRAG6_memory' and \
-                    v > self.sysctl['ip6frag_high_thresh'] - 10:
-                    logger.info('%s: %s %s' % (k, v, self.log[k]))
+                elif (k == 'FRAG6_memory'
+                      and v > self.sysctl['ip6frag_high_thresh'] - 10):
+                    self.logger.info('%s: %s %s' % (k, v, self.log[k]))
+
+
+class LogCheck(object):
+    def __init__(self, logger, config, *_args):
+        self.sock1 = LogSockstat(logger, config)
+        self.sock2 = LogSockstat(logger, config, 'cat /proc/net/sockstat6')
+
+    def do_action(self):
+        self.sock1.do_action()
+        self.sock2.do_action()

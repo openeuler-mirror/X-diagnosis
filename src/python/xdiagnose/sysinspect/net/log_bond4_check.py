@@ -1,20 +1,21 @@
+# coding: utf-8
 import re
-
 from subprocess import getstatusoutput
-from xdiagnose.utils.logger import inspect_warn_logger as logger
 
 slave_sync_stat = 0x3c
 
 
-class LogBond4Check(object):
+class LogCheck(object):
     bond_fields = ['MII Status', 'Speed', 'port state']
 
-    def __init__(self):
+    def __init__(self, logger, _config, *_args):
+        self.logger = logger
         self.bond_info = {}
         self.slave_info = {}
 
-    def get_valid_bond(self):
-        stats = getstatusoutput('lsmod |grep bonding')
+    @staticmethod
+    def get_valid_bond():
+        stats = getstatusoutput('lsmod|grep bonding')
         if stats[0]:
             return []
 
@@ -23,7 +24,8 @@ class LogBond4Check(object):
         if stats[0] == 0:
             bond_port = stats[1].split()
             for bond in bond_port:
-                bond_mode = getstatusoutput('cat /sys/class/net/%s/bonding/mode' % bond)
+                bond_mode = getstatusoutput(
+                    'cat /sys/class/net/%s/bonding/mode' % bond)
                 if bond_mode[0] == 0 and bond_mode[1] == '802.3ad 4':
                     res.append(bond)
                     return res
@@ -36,9 +38,10 @@ class LogBond4Check(object):
             info_blocks = stats[1].split('\n\n')
             for info in info_blocks:
                 if info.startswith('Slave Interface:'):
-                    slave = [i.split('\n')[0].strip() for i in info.split('Slave Interface: ')][1]
+                    slave = [i.split('\n')[0].strip() for i in
+                             info.split('Slave Interface: ')][1]
                     self.bond_info[bond].append(slave)
-                    self.slave_info[slave]= {}
+                    self.slave_info[slave] = {}
                     for field in self.bond_fields:
                         res = re.findall(r'%s:\s+(\w+)' % field, info)
                         self.slave_info[slave][field] = res
@@ -53,20 +56,27 @@ class LogBond4Check(object):
             for slave in self.bond_info[bond]:
                 if self.slave_info[slave]['MII Status'][0] == 'up':
                     lacp_failed[slave] = []
-                    speed = getstatusoutput('cat /sys/class/net/%s/speed' % slave)
+                    speed = getstatusoutput(
+                        'cat /sys/class/net/%s/speed' % slave)
                     slave_speed.append(int(speed[1]))
-                    if not slave_sync_stat & int(self.slave_info[slave]['port state'][0]):
+                    if not slave_sync_stat & int(
+                            self.slave_info[slave]['port state'][0]):
                         lacp_failed[slave].append('actor')
-                    if not slave_sync_stat & int(self.slave_info[slave]['port state'][1]):
+                    if not slave_sync_stat & int(
+                            self.slave_info[slave]['port state'][1]):
                         lacp_failed[slave].append('partner')
                 if len(set(slave_speed)) != 1:
-                    logger.info('{} slave\'s speed is different{},please check slave speed!!!'.format(bond, slave_speed))
+                    self.logger.info(
+                        '{} slave\'s speed is different {}, '
+                        'please check slave speed!!!'.format(bond, slave_speed))
                     return
                 if sum(slave_speed) != int(bond_speed[1]):
-                    logger.info('{} speed is abnormal!!! slave_speed:{} bond_speed:{}'.format(bond, sum(slave_speed),
-                                                                                              int(bond_speed[1])))
+                    self.logger.info(
+                        '{} speed is abnormal!!! '
+                        'slave_speed:{} bond_speed:{}'.format(
+                            bond, sum(slave_speed), int(bond_speed[1])))
                     for k, v in lacp_failed.items():
                         if v:
-                            logger.info('{}: {} is not synchronization({})'.format(bond, k, '、'.join(v)))
-
-
+                            self.logger.info(
+                                '{}: {} is not synchronization({})'.format(
+                                    bond, k, ' '.join(v)))

@@ -19,8 +19,11 @@ modules = {
 }
 
 
-def sig_handler(_s, _f):
-    sys.exit(0)
+def sig_handler(signum, _f):
+    if signum == signal.SIGHUP:
+        inspector.reload()
+    else:
+        sys.exit(0)
 
 
 def main():

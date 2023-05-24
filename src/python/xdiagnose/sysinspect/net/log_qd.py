@@ -2,33 +2,32 @@
 import re
 from subprocess import getstatusoutput
 
-from xdiagnose.utils.logger import inspect_warn_logger as logger
 
-
-class LogQdisc(object):
+class LogCheck(object):
     log = {
         'backlog_p': 'Qdisc backlog packets',
-        'dropped':   'Qdisc dropped packets',
+        'dropped': 'Qdisc dropped packets',
     }
 
     dev_re = re.compile(r'dev\s(\w+)\s')
     pkt_re = re.compile(r'\s(\d+)\spkt')
 
-    qdisc_re = re.compile(r'qdisc\s(\w+)\s(\d+)\:')
+    qdisc_re = re.compile(r'qdisc\s(\w+)\s(\d+):')
     bytes_re = re.compile(r'\s(\d+)\sbytes')
 
     dropped_re = re.compile(r'dropped\s(\d+)')
     backlog_re = re.compile(r'backlog\s(\d+)[kKmMgG]?b\s(\d+)p')
 
-    def __init__(self, cmd='tc -s qdisc'):
-        self.cmd = cmd
+    def __init__(self, logger, _config, *_args):
+        self.logger = logger
+        self.cmd = 'tc -s qdisc'
         self.diff = {}
         self.old_stats = ''
         stats = getstatusoutput(self.cmd)
         if stats[0] == 0:
             self.old_stats = stats[1]
         else:
-            logger.info('%s is not available' % self.cmd)
+            self.logger.info('%s is not available' % self.cmd)
 
     def get_diff(self):
         self.diff = {}
@@ -45,7 +44,7 @@ class LogQdisc(object):
             new_lines = stats[1].split('\n')
 
             if len(old_lines) != len(new_lines):
-                logger.info('%s line numbers not equal' % self.cmd)
+                self.logger.info('%s line numbers not equal' % self.cmd)
                 return self.diff
 
             dev = ''
@@ -78,20 +77,24 @@ class LogQdisc(object):
                     if o_sent_bytes != n_sent_bytes:
                         o_sent_pkt = self.pkt_re.search(oline).group(1)
                         n_sent_pkt = self.pkt_re.search(nline).group(1)
-                        self.diff[qdisc_name + '#bytes'] = int(n_sent_bytes) - int(o_sent_bytes)
-                        self.diff[qdisc_name + '#pkt'] = int(n_sent_pkt) - int(o_sent_pkt)
+                        self.diff[qdisc_name + '#bytes'] = (int(n_sent_bytes)
+                                                            - int(o_sent_bytes))
+                        self.diff[qdisc_name + '#pkt'] = (int(n_sent_pkt)
+                                                          - int(o_sent_pkt))
 
                     o_dropped = self.dropped_re.search(oline).group(1)
                     n_dropped = self.dropped_re.search(nline).group(1)
                     if o_dropped != n_dropped:
-                        self.diff[qdisc_name + '#dropped'] = int(n_dropped) - int(o_dropped)
+                        self.diff[qdisc_name + '#dropped'] = (int(n_dropped)
+                                                              - int(o_dropped))
 
                 elif nline.startswith('backlog'):
                     o_backlog = self.backlog_re.search(oline).group(2)
                     n_backlog = self.backlog_re.search(nline).group(2)
 
                     if o_backlog != n_backlog:
-                        self.diff[qdisc_name + '#backlog_p'] = int(n_backlog) - int(o_backlog)
+                        self.diff[qdisc_name + '#backlog_p'] = \
+                            int(n_backlog) - int(o_backlog)
         finally:
             self.old_stats = stats[1]
 
@@ -102,5 +105,5 @@ class LogQdisc(object):
         for k, v in stats.items():
             dev, qd, tp = k.split('#')
             if tp in self.log:
-                logger.info('%s %s %s: %s %s' %
-                            (dev, qd, tp, v, self.log[tp]))
+                self.logger.info('%s %s %s: %s %s' %
+                                 (dev, qd, tp, v, self.log[tp]))

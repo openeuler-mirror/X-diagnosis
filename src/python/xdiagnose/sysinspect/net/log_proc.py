@@ -1,6 +1,5 @@
 # coding: utf-8
 from subprocess import getstatusoutput
-from xdiagnose.utils.logger import inspect_warn_logger as logger
 
 
 class LogProc(object):
@@ -37,7 +36,8 @@ class LogProc(object):
 
     log = dict(netstat_log, **snmp_log)
 
-    def __init__(self, cmd):
+    def __init__(self, logger, _, cmd):
+        self.logger = logger
         self.cmd = cmd
         self.diff = {}
         self.old_stats = ''
@@ -45,7 +45,7 @@ class LogProc(object):
         if stats[0] == 0:
             self.old_stats = stats[1]
         else:
-            logger.info('%s is not available' % self.cmd)
+            self.logger.info('%s is not available' % self.cmd)
 
     def get_diff(self):
         self.diff = {}
@@ -61,23 +61,20 @@ class LogProc(object):
             old_lines = self.old_stats.split('\n')
             new_lines = stats[1].split('\n')
             if len(old_lines) != len(new_lines):
-                #logger.info('%s line numbers not equal' % self.cmd)
                 return self.diff
 
             for i in range(len(new_lines)):
-                #只提取变化的部分，也就是数据部分
                 if old_lines[i] == new_lines[i]:
                     continue
 
                 if i < 1:
-                    logger.info('%s no title line' % self.cmd)
+                    self.logger.info('%s no title line' % self.cmd)
                     return self.diff
 
                 old_elems = old_lines[i].split(' ')
                 new_elems = new_lines[i].split(' ')
-                #参数的数量有可能会发生变化，直接退出。等后面数量一致之后再比较
+
                 if len(old_elems) != len(new_elems):
-                    #logger.info('%s elems numbers not equal' % self.cmd)
                     return self.diff
 
                 proto = new_elems[0][:-1]
@@ -85,7 +82,8 @@ class LogProc(object):
                 for j in range(1, len(new_elems)):
                     if old_elems[j] != new_elems[j]:
                         stats_name = proto + '_' + titles[j]
-                        self.diff[stats_name] = int(new_elems[j]) - int(old_elems[j])
+                        self.diff[stats_name] = (int(new_elems[j])
+                                                 - int(old_elems[j]))
         finally:
             self.old_stats = stats[1]
 
@@ -96,4 +94,14 @@ class LogProc(object):
         for k, v in stats.items():
             _, col = k.split('_')
             if col in self.log:
-                logger.info('%s: %s %s' % (k, v, self.log[col]))
+                self.logger.info('%s: %s %s' % (k, v, self.log[col]))
+
+
+class LogCheck(object):
+    def __init__(self, logger, config, *_args):
+        self.proc1 = LogProc(logger, config, 'cat /proc/net/snmp')
+        self.proc2 = LogProc(logger, config, 'cat /proc/net/netstat')
+
+    def do_action(self):
+        self.proc1.do_action()
+        self.proc2.do_action()

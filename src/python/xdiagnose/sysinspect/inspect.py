@@ -1,47 +1,39 @@
 # coding: utf-8
 import os
 import threading
-from configparser import ConfigParser
+import importlib
 
-from xdiagnose.utils.config import config
+from .utils.logger import logger_init, reload_logger
+from .utils.config import read_conf
 
-from .common.log_cpu import LogCpu
-from .common.log_common_check import LogCommonCheck
-from .net.log_ct import LogConntrack
-from .net.log_qd import LogQdisc
-from .net.log_proc import LogProc
-from .net.log_sk import LogSockstat
-from .net.log_net_check import LogNetCheck
-from .net.log_nic_check import LogNicCheck
-from .net.log_bond4_check import LogBond4Check
+FILE_DIR = os.path.dirname(__file__)
+MOD_DIRS = ['common', 'net', 'custom']
 
 
 class Inspector(object):
     def __init__(self):
         self.timer = None
-        self.interval = config.getint('inspect', 'Interval') or 3
-        self.configfile = os.path.join(os.path.dirname(__file__), '../../../../config/', 'sysinspect.conf')
-        if not os.path.exists(self.configfile):
-            self.configfile = '/etc/x-diagnose/sysinspect.conf'
-        self.modules = {'cpucheck'      : [LogCpu(),True],
-                        'commoncheck'   : [LogCommonCheck(),True],
-                        'conntrackcheck': [LogConntrack(),True],
-                        'qdisccheck'    : [LogQdisc(),True],
-                        'snmpcheck'     : [LogProc('cat /proc/net/snmp'),True],
-                        'netstatcheck'  : [LogProc('cat /proc/net/netstat'),True],
-                        'sockstatcheck' : [LogSockstat(),True],
-                        'sockstat6check': [LogSockstat('cat /proc/net/sockstat6'),True],
-                        'netcheck'      : [LogNetCheck(),True],
-                        'niccheck'      : [LogNicCheck(),True],
-                        'bond4check'    : [LogBond4Check(),True]}
+        self.modules = []
+        self.config = read_conf()
+        self.logger = logger_init()
+        self.interval = self.config.getint('inspect', 'Interval', fallback=3)
 
     def reg_modules(self):
-        sysconfig = ConfigParser()
-        sysconfig.read(self.configfile)
-        modulelist = sysconfig['modules']
-        for iterm in modulelist:
-            if iterm in self.modules and sysconfig['modules'][iterm] == 'off':
-                self.modules[iterm][1] = False
+        for mod_dir in MOD_DIRS:
+            mod_files = os.listdir(os.path.join(FILE_DIR, mod_dir))
+            for mod_file in mod_files:
+                if not mod_file.endswith('.py'):
+                    continue
+                mod = mod_file[:-3]
+                if (mod in self.config['modules']
+                        and self.config['modules'][mod] == 'on'):
+                    i_mod = importlib.import_module(__name__.rsplit('.', 1)[0]
+                                                    + '.' + mod_dir
+                                                    + '.' + mod)
+                    importlib.reload(i_mod)
+                    args = [self.config.get('variables', mod, fallback='')]
+                    self.modules.append(
+                        i_mod.LogCheck(self.logger, self.config, *args))
 
     def start_inspecttimer(self):
         self.timer = threading.Timer(self.interval, self.do_inspection)
@@ -49,8 +41,7 @@ class Inspector(object):
 
     def do_inspection(self):
         for mod in self.modules:
-            if self.modules[mod][1] == True:
-                self.modules[mod][0].do_action()
+            mod.do_action()
         self.start_inspecttimer()
 
     def start_inspect(self):
@@ -62,3 +53,9 @@ class Inspector(object):
             self.timer.cancel()
             self.timer = None
 
+    def reload(self):
+        self.stop_inspect()
+        self.config = read_conf()
+        reload_logger()
+        self.modules = []
+        self.start_inspect()

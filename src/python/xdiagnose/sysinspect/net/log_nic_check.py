@@ -1,30 +1,43 @@
+# coding: utf-8
 import re
-
 from subprocess import getstatusoutput
-from xdiagnose.utils.logger import inspect_warn_logger as logger
 
-class LogNicCheck(object):
+
+class LogCheck(object):
     data = {
-            'tx_timeout': [re.compile(r'.*?tx_timeout.*?:\s(\d+)')]
+        'tx_timeout': [re.compile(r'.*?tx_timeout.*?:\s(\d+)')]
     }
     pause = {
-            'rx_pause' : ['link_xoff_rx', 'rx_flow_control_xoff', 'rx_pause_ctrl_phy', 'mac_rx_pause_num', 'mac_rx_mac_pause_num'],
-            'tx_pause' : ['link_xoff_tx', 'tx_flow_control_xoff', 'tx_pause_ctrl_phy', 'mac_tx_pause_num', 'mac_tx_mac_pause_num']
+        'rx_pause': [
+            'link_xoff_rx',
+            'rx_flow_control_xoff',
+            'rx_pause_ctrl_phy',
+            'mac_rx_pause_num',
+            'mac_rx_mac_pause_num'
+        ],
+        'tx_pause': [
+            'link_xoff_tx',
+            'tx_flow_control_xoff',
+            'tx_pause_ctrl_phy',
+            'mac_tx_pause_num',
+            'mac_tx_mac_pause_num'
+        ]
     }
     error_drop = {
-            'rx_dropped' : 4,
-            'tx_dropped' : 10,
-            'rx_errors'  : 3,
-            'tx_errors'  : 9
+        'rx_dropped': 4,
+        'tx_dropped': 10,
+        'rx_errors': 3,
+        'tx_errors': 9
     }
 
-    def __init__(self, cmd='ip a'):
-        self.cmd = cmd
+    def __init__(self, logger, _config, *_args):
+        self.logger = logger
+        self.cmd = 'ip a'
         self.info = {}
         self.old_info = {}
         stats = getstatusoutput(self.cmd)
         if stats[0] == 0:
-            self.ip_info =  stats[1]
+            self.ip_info = stats[1]
 
     def get_valid_port(self):
         up_port = []
@@ -39,7 +52,8 @@ class LogNicCheck(object):
     def check_nic(self, port):
         port_info = getstatusoutput('ethtool %s' % port)
         if port_info[0] == 0:
-            support_port = re.search(r'\w+:\s((FIBRE)|(Twisted Pair))', port_info[1])
+            support_port = re.search(r'\w+:\s((FIBRE)|(Twisted Pair))',
+                                     port_info[1])
             if support_port:
                 return True
         return False
@@ -81,7 +95,8 @@ class LogNicCheck(object):
                 if nic_output[0] == 0:
                     port_info = getstatusoutput('ethtool %s' % port)
                     if port_info[0] == 0:
-                        speed_info = re.search(r'.*?Speed:\s(\w+)', port_info[1])
+                        speed_info = re.search(r'.*?Speed:\s(\w+)',
+                                               port_info[1])
                         if speed_info:
                             speed = speed_info.group(1)
                     self.get_nic_stat(nic_output[1], port)
@@ -89,8 +104,8 @@ class LogNicCheck(object):
                         return
                     for k, v in self.info.items():
                         if k and self.info[k] - self.old_info[k] > 0:
-                            logger.info('%s:speed=%s' % (port, speed))
-                            logger.info('%s is increased form %s to %s' % (
-                            k, self.old_info[k], self.info[k]))
+                            self.logger.info('%s:speed=%s' % (port, speed))
+                            self.logger.info('%s is increased form %s to %s' % (
+                                k, self.old_info[k], self.info[k]))
         finally:
             self.old_info = self.info
