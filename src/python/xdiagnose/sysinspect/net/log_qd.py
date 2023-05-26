@@ -18,7 +18,7 @@ class LogCheck(object):
     dropped_re = re.compile(r'dropped\s(\d+)')
     backlog_re = re.compile(r'backlog\s(\d+)[kKmMgG]?b\s(\d+)p')
 
-    def __init__(self, logger, _config, *_args):
+    def __init__(self, logger, _config, **_kwargs):
         self.logger = logger
         self.cmd = 'tc -s qdisc'
         self.diff = {}

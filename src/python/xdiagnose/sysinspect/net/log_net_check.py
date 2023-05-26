@@ -35,7 +35,7 @@ class LogCheck(object):
         ]
     }
 
-    def __init__(self, logger, _config, *_args):
+    def __init__(self, logger, _config, **_kwargs):
         self.cmd = 'sysctl -a'
         self.logger = logger
         self.num = {}

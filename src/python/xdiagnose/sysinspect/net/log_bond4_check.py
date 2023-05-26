@@ -8,7 +8,7 @@ slave_sync_stat = 0x3c
 class LogCheck(object):
     bond_fields = ['MII Status', 'Speed', 'port state']
 
-    def __init__(self, logger, _config, *_args):
+    def __init__(self, logger, _config, **_kwargs):
         self.logger = logger
         self.bond_info = {}
         self.slave_info = {}

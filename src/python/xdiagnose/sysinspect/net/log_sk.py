@@ -117,7 +117,7 @@ class LogSockstat(object):
 
 
 class LogCheck(object):
-    def __init__(self, logger, config, *_args):
+    def __init__(self, logger, config, **_kwargs):
         self.sock1 = LogSockstat(logger, config)
         self.sock2 = LogSockstat(logger, config, 'cat /proc/net/sockstat6')
 

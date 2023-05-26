@@ -98,7 +98,7 @@ class LogProc(object):
 
 
 class LogCheck(object):
-    def __init__(self, logger, config, *_args):
+    def __init__(self, logger, config, **_kwargs):
         self.proc1 = LogProc(logger, config, 'cat /proc/net/snmp')
         self.proc2 = LogProc(logger, config, 'cat /proc/net/netstat')
 
