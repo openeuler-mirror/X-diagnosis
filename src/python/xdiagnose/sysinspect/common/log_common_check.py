@@ -13,7 +13,6 @@ class LogCheck(object):
         self.cmd = {
             'sysctl': 'sysctl -a',
             'arping': 'arping -w 3 -c 1',
-            'memory': 'cat /proc/meminfo',
             'sshd':   'cat /etc/ssh/sshd_config',
             'disk':   'df -h',
             'inode':  'df -i'
@@ -73,37 +72,6 @@ class LogCheck(object):
                 self.logger.info(
                     '[%s][%s] is used over %d%%, use <%s> show details'
                     % ('disk_check', elems[0], used, cmd))
-
-    def memory_check(self, cmd):
-        meminfo = {}
-
-        stats = getstatusoutput(cmd)
-        if stats[0] != 0:
-            self.logger.info('%s is not available' % cmd)
-            return
-
-        lines = stats[1].split('\n')
-        for line in lines:
-            elems = line.split()
-            meminfo[elems[0][:-1]] = elems[1]
-
-        SwapTotal = int(meminfo['SwapTotal'])
-        SwapFree = int(meminfo['SwapFree'])
-
-        if SwapTotal != 0 and SwapFree != 0:
-            swap_percent = (SwapTotal - SwapFree) * 100 / SwapTotal
-            if swap_percent > 70:
-                self.logger.info(
-                    'The swap memory has used over %d%%' % swap_percent)
-
-        MemTotal = int(meminfo['MemTotal'])
-        MemAvailable = int(meminfo['MemAvailable'])
-
-        if MemTotal != 0 and MemAvailable != 0:
-            memory_percent = (MemTotal - MemAvailable) * 100 / MemTotal
-            if memory_percent > 80:
-                self.logger.info(
-                    'The memory has used over %d%%' % memory_percent)
 
     def sysctl_init(self):
         f = open("/etc/sysctl.conf", 'r')
@@ -270,7 +238,6 @@ class LogCheck(object):
     def do_action(self):
         self.disk_check(self.cmd['disk'])
         self.disk_check(self.cmd['inode'])
-        self.memory_check(self.cmd['memory'])
         self.sysctl_check()
         self.fd_check()
         self.ntp_check()
