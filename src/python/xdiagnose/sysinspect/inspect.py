@@ -31,12 +31,8 @@ class Inspector(object):
                                                     + '.' + mod_dir
                                                     + '.' + mod)
                     importlib.reload(i_mod)
-
-                    kwargs = {}
-                    if mod in self.config:
-                        kwargs = dict(self.config[mod])
                     self.modules.append(
-                        i_mod.LogCheck(self.logger, self.config, **kwargs))
+                        i_mod.LogCheck(self.logger, self.config))
 
     def start_inspecttimer(self):
         self.timer = threading.Timer(self.interval, self.do_inspection)

@@ -6,7 +6,7 @@ from subprocess import getstatusoutput
 
 
 class LogCheck(object):
-    def __init__(self, logger, config, **_kwargs):
+    def __init__(self, logger, config):
         self.logger = logger
         self.config = config
 

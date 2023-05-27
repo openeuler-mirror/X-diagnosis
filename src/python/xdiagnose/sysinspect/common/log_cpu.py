@@ -6,13 +6,14 @@ class LogCheck(object):
     cpu_cols = ['user', 'nice', 'system', 'idle', 'iowait', 'irq',
                 'softirq', 'steal', 'guest', 'guest_nice']
 
-    def __init__(self, logger, _config, **kwargs):
+    def __init__(self, logger, config):
         self.logger = logger
+        self.config = config
         self.cpu_rate = {}
         self.cpu_high = {}
         self.cpu_stat = {}
 
-        cpu_max = int(kwargs.get('cpumax'))
+        cpu_max = self.config.getint('log_cpu', 'cpumax')
         if 0 < cpu_max <= 100:
             self.cpu_max = cpu_max
         else:

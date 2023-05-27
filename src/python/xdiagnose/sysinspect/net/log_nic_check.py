@@ -30,7 +30,7 @@ class LogCheck(object):
         'tx_errors': 9
     }
 
-    def __init__(self, logger, _config, **_kwargs):
+    def __init__(self, logger, _config):
         self.logger = logger
         self.cmd = 'ip a'
         self.info = {}

@@ -7,7 +7,7 @@ class LogCheck(object):
         'drop': 'Packet may not hit in window',
     }
 
-    def __init__(self, logger, _config, **_kwargs):
+    def __init__(self, logger, _config):
         self.logger = logger
         self.cmd = 'cat /proc/net/stat/nf_conntrack'
         self.diff = {}
