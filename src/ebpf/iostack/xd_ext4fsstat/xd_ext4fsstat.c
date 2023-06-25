@@ -122,7 +122,7 @@ static error_t parse_arg(int key, char *arg, struct argp_state *state)
 		break;
 	case 'i':
 		env.interval = strtol(arg, NULL, 10);
-		if (errno) {
+		if (errno || env.interval < 1) {
 			fprintf(stderr, "invalid internal");
 			argp_usage(state);
 		}
@@ -156,7 +156,7 @@ static error_t parse_arg(int key, char *arg, struct argp_state *state)
 		break;
 	case 't':
 		env.times = strtol(arg, NULL, 10);
-		if (errno) {
+		if (errno || env.times < 1) {
 			fprintf(stderr, "invalid topN\n");
 			argp_usage(state);
 		}
@@ -455,10 +455,12 @@ static int get_mntpoint_dev(char *mntname, unsigned int *dev)
 			if (strcmp(mntent->mnt_dir, mntname))
 				continue;
 			strcpy(devicename, mntent->mnt_fsname);
-			if (readlink(devicename, buffer, BUFFER_LEN) != -1)
+			if (readlink(devicename, buffer, BUFFER_LEN) != -1) {
 				ptr = strrchr(buffer, '/');
-			else
+			} else {
 				ptr = strrchr(devicename, '/');
+				errno = 0;
+			}
 			ptr++;
 			devt = get_block_devt(ptr);
 			break;	

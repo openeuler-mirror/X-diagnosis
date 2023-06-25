@@ -177,14 +177,14 @@ static error_t parse_arg(int key, char *arg, struct argp_state *state)
 		break;
 	case 'i':
 		env.interval = strtol(arg, NULL, 10);
-		if (errno) {
+		if (errno || env.interval < 1) {
 			fprintf(stderr, "invalid internal\n");
 			argp_usage(state);
 		}		
 		break;
 	case 't':
 		env.times = strtol(arg, NULL, 10);
-		if (errno) {
+		if (errno || env.times < 1) {
 			fprintf(stderr, "invalid times\n");
 			argp_usage(state);
 		}
