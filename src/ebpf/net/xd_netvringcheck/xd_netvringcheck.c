@@ -121,6 +121,10 @@ int main(int argc, char **argv)
 		switch (ch) {
 		case 'i':
 			interval_time = atoi(optarg);
+			if (interval_time < 1) {
+				printf("invalid argument: interval time\n");
+				return -1;
+			}
 			break;
 		case 'q':
 			filter_idx = atoi(optarg);
