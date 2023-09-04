@@ -202,7 +202,11 @@ int tp__sched_switch(struct bpf_raw_tracepoint_args *ctx)
 	if(args->waitsched_enable == 0 || next_pid == 0)
 		return 0;
 	/* if prev task state is running, need be sched again */
+#if (LINUX_KERNEL_CODE >= KERNEL_VERSION(5,14,0))
+	bpf_probe_read(&state, sizeof(state), (void *)(&prev->__state));
+#else
 	bpf_probe_read(&state, sizeof(state), (void *)(&prev->state));
+#endif
 	if(state == TASK_RUNNING)
 		trace_wait_pid(prev_pid);
 	/* check schedule slow tasks */

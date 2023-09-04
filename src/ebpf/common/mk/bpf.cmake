@@ -14,7 +14,19 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
 set(ARCH "arm64")
 endif()
 
+cmake_host_system_information(RESULT RELEASE QUERY OS_RELEASE)
+string(REPLACE "-" "." RELEASE2 ${RELEASE})
+string(REPLACE "." ";" RELEASE_LIST ${RELEASE2})
+
+list(GET RELEASE_LIST 0 KERNEL_MAJOR)
+list(GET RELEASE_LIST 1 KERNEL_MINOR)
+list(GET RELEASE_LIST 2 KERNEL_PATCH)
+
+math(EXPR KERNEL_CODE "(${KERNEL_MAJOR} << 16) + (${KERNEL_MINOR} << 8) + ${KERNEL_PATCH}")
+
 set(DEFS "-DBPF_NO_PRESERVE_ACCESS_INDEX")
+set(DEFS "${DEFS} -DLINUX_KERNEL_CODE=${KERNEL_CODE}")
+
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -g -O2 -target bpf -D__TARGET_ARCH_${ARCH} ${DEFS}")
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_ISYSTEM_DIRS} -fsanitize=address -ggdb -fno-omit-frame-pointer -fPIC " )
 

@@ -447,7 +447,11 @@ int ntrace_rawv6_sendmsg(struct pt_regs *ctx)
 	dinfo = get_filter_info();
 	if (!dinfo || ipaddr_cmp(daddr, dinfo->hostaddr))
 		return 0;
+#if (LINUX_KERNEL_CODE >= KERNEL_VERSION(6,4,0))
+	bpf_probe_read(&iov, sizeof(iov), &msg->msg_iter.__iov);
+#else
 	bpf_probe_read(&iov, sizeof(iov), &msg->msg_iter.iov);
+#endif
 	bpf_probe_read(&iov_len, sizeof(iov_len), &iov->iov_len);
 	bpf_probe_read(&icmph, sizeof(icmph), &iov->iov_base);
 	bpf_probe_read(&icmp_seq, sizeof(icmp_seq),
@@ -747,7 +751,11 @@ int ntrace_raw_sendmsg(struct pt_regs *ctx)
 	if (!dinfo || daddr != dinfo->hostaddr[0])
 		return 0;
 
+#if (LINUX_KERNEL_CODE >= KERNEL_VERSION(6,4,0))
+	bpf_probe_read(&iov, sizeof(iov), &msg->msg_iter.__iov);
+#else
 	bpf_probe_read(&iov, sizeof(iov), &msg->msg_iter.iov);
+#endif
 	bpf_probe_read(&iov_len, sizeof(iov_len), &iov->iov_len);
 
 	bpf_probe_read(&icmph, sizeof(icmph), &iov->iov_base);

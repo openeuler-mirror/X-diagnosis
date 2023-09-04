@@ -10,6 +10,8 @@
 #define BPF_PROBE_VAL(P) \
     ({typeof(P) val = 0; bpf_probe_read(&val, sizeof(val), &P); val;})
 
+#define KERNEL_VERSION(a,b,c) (((a) << 16) + ((b) << 8) + (c))
+
 #define sk_dontcopy_begin       __sk_common.skc_dontcopy_begin
 #define sk_dontcopy_end         __sk_common.skc_dontcopy_end
 #define sk_hash                 __sk_common.skc_hash
