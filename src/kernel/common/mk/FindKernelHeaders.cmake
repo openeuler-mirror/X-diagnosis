@@ -7,7 +7,7 @@ execute_process(
 
 # Set the kernel headers dir
 set(KERNELHEADERS_DIR
-        /usr/src/linux-headers-${KERNEL_RELEASE}
+        /lib/modules/${KERNEL_RELEASE}/build
         CACHE PATH "Kernel headers dir"
 )
 

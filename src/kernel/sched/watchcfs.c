@@ -1,6 +1,6 @@
 /******************************************************************************
- * Copyright (c) Huawei Technologies Co., Ltd. 2022. All rights reserved.
- * xd_iolatency licensed under the Mulan PSL v2.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+ * watchcfs licensed under the Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
  * You may obtain a copy of Mulan PSL v2 at:
  *     http://license.coscl.org.cn/MulanPSL2
@@ -28,9 +28,6 @@
 #include <linux/cpuhotplug.h>
 #include <linux/version.h>
 
-#define	ALERT_LIMIT	3
-#define ALERT_INTERVAL_S 60
-
 static bool __read_mostly watchcfs_enabled = true;
 static uint __read_mostly watchcfs_thresh = 10;
 static u64 __read_mostly sample_period;
@@ -44,8 +41,7 @@ static DEFINE_MUTEX(watchcfs_mutex);
 static DEFINE_PER_CPU(unsigned long, watchcfs_touch_ts);
 static DEFINE_PER_CPU(struct hrtimer, watchcfs_hrtimer);
 static DEFINE_PER_CPU(struct work_struct, watchcfs_work);
-static DEFINE_PER_CPU(uint, alert_count);
-static DEFINE_PER_CPU(unsigned long, alert_start_time);
+static DEFINE_PER_CPU(bool, work_done) = true;
 
 /* Returns seconds, approximately. */
 static unsigned long get_timestamp(void)
@@ -70,6 +66,7 @@ static void __touch_watchcfs(void)
 static void watchcfs_work_handler(struct work_struct *data)
 {
 	__touch_watchcfs();
+	__this_cpu_write(work_done, true);
 }
 
 static int is_soft_starve(unsigned long touch_ts)
@@ -84,29 +81,25 @@ static int is_soft_starve(unsigned long touch_ts)
 static enum hrtimer_restart watchcfs_timer_fn(struct hrtimer *hrtimer)
 {
 	int duration;
-	unsigned long now = get_timestamp();
 	unsigned long touch_ts = __this_cpu_read(watchcfs_touch_ts);
+	static DEFINE_RATELIMIT_STATE(ratelimit, 60 * HZ, 5);
 
-	queue_work_on(smp_processor_id(), system_wq, this_cpu_ptr(&watchcfs_work));
+	if (__this_cpu_read(work_done)) {
+		__this_cpu_write(work_done, false);
+		queue_work_on(smp_processor_id(), system_wq, this_cpu_ptr(&watchcfs_work));
+	}
 	/* .. and repeat */
 	hrtimer_forward_now(hrtimer, ns_to_ktime(sample_period));
-	if (time_after(now, __this_cpu_read(alert_start_time) + ALERT_INTERVAL_S)) {
-		__this_cpu_write(alert_count, 0);
-		__this_cpu_write(alert_start_time, now);
-	}
 
 	duration = is_soft_starve(touch_ts);
 	if (unlikely(duration)) {
 		/* Start period for the next softstarve warning. */
 		__touch_watchcfs();
-		if (__this_cpu_read(alert_count) >= ALERT_LIMIT) {
-			pr_emerg("The alarm count limit has been reached on CPU#%d.\n", smp_processor_id());
-		} else {
+		if (__ratelimit(&ratelimit)) {
 			pr_emerg("BUG: soft starve - CPU#%d stuck for %us! [%s:%d]\n",
 				smp_processor_id(), duration,
 				current->comm, task_pid_nr(current));
 			dump_stack();
-			__this_cpu_inc(alert_count);
 		}
 	}
 
@@ -135,7 +128,6 @@ static int softstarve_start_fn(void *data)
 	struct hrtimer *hrtimer = this_cpu_ptr(&watchcfs_hrtimer);
 	struct work_struct *work = this_cpu_ptr(&watchcfs_work);
 
-	__this_cpu_write(alert_start_time, get_timestamp());
 	INIT_WORK(work, watchcfs_work_handler);
 	hrtimer_init(hrtimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	hrtimer->function = watchcfs_timer_fn;
