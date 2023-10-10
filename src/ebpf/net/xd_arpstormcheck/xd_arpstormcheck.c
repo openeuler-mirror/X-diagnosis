@@ -91,13 +91,10 @@ static void xarp_check_show(void)
 		bpf_map_delete_elem(map_fd, &next_key);
 		key = next_key;
 	}
-
-	if(check_count != 0xffffffff){
-		check_count--;
-		if(check_count == 0){
-			running = 0;
-		}
-	}
+    if (check_count != 0xffffffff && --check_count == 0) {
+        running = 0;
+    }
+	
 	return;
 }
 
