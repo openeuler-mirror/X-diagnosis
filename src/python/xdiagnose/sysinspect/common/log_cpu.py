@@ -25,9 +25,10 @@ class LogCheck(object):
         f = open("/proc/stat", 'r')
         lines = f.readlines()
 
+        pattern = re.compile(r'cpu\d+')
         cpus = []
         for line in lines:
-            if re.search(r'cpu\d+', line):
+            if pattern.match(line):
                 cpus.append(line.split())
 
         for cpu, cpu_data in enumerate(cpus):
